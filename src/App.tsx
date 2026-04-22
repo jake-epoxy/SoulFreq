@@ -3,8 +3,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Hero from './components/Hero';
 import Studio from './components/Studio';
 import Assessment from './components/Assessment';
+import Protocol from './components/Protocol';
 
-export type AppStage = 'hero' | 'assessment' | 'studio';
+export type AppStage = 'hero' | 'assessment' | 'studio' | 'protocol';
 
 function App() {
   const [stage, setStage] = useState<AppStage>('hero');
@@ -22,7 +23,12 @@ function App() {
         <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
           <a href="#" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.9rem' }}>The Science</a>
           <a href="#" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.9rem' }}>Testimonials</a>
-          <button style={{ padding: '0.5rem 1.5rem', borderRadius: '50px', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.9rem' }}>Members Area</button>
+          <button 
+            style={{ padding: '0.5rem 1.5rem', borderRadius: '50px', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.9rem', cursor: 'pointer', background: stage === 'protocol' ? 'rgba(255,255,255,0.1)' : 'transparent' }}
+            onClick={() => setStage('protocol')}
+          >
+            The Protocol
+          </button>
         </nav>
       </header>
 
@@ -66,6 +72,21 @@ function App() {
               style={{ width: '100%' }}
             >
               <Studio initialPreset={initialPreset} />
+            </motion.div>
+          )}
+
+          {stage === 'protocol' && (
+            <motion.div 
+              key="protocol"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              style={{ width: '100%' }}
+            >
+              <Protocol onStartPhase={(presetId) => {
+                setInitialPreset(presetId);
+                setStage('studio');
+              }} />
             </motion.div>
           )}
         </AnimatePresence>

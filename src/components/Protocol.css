@@ -1,0 +1,170 @@
+.protocol-container {
+  width: 100%;
+  max-width: 1000px;
+  padding: 2rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.protocol-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.protocol-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  letter-spacing: -1px;
+}
+
+.protocol-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.protocol-warning {
+  background: rgba(255, 60, 60, 0.1);
+  border: 1px solid rgba(255, 60, 60, 0.2);
+  color: #ff8888;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  text-align: left;
+  margin-top: 2rem;
+}
+
+.warning-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.phases-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+.phase-card {
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.phase-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+
+.phase-card.cyan-accent::before { background: var(--brand-cyan); }
+.phase-card.purple-accent::before { background: var(--brand-purple); }
+.phase-card.blue-accent::before { background: #0088ff; }
+
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.phase-number {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-secondary);
+}
+
+.phase-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.phase-content {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.phase-instructions {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+}
+
+.phase-instructions h4 {
+  color: #fff;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.phase-instructions ul, .phase-instructions ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.phase-action {
+  margin-top: 1rem;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.phase-card.cyan-accent .phase-action {
+  background: rgba(0, 240, 255, 0.1);
+  color: var(--brand-cyan);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+}
+.phase-card.cyan-accent .phase-action:hover {
+  background: rgba(0, 240, 255, 0.2);
+}
+
+.phase-card.purple-accent .phase-action {
+  background: rgba(122, 0, 255, 0.1);
+  color: #b066ff;
+  border: 1px solid rgba(122, 0, 255, 0.2);
+}
+.phase-card.purple-accent .phase-action:hover {
+  background: rgba(122, 0, 255, 0.2);
+}
+
+.phase-card.blue-accent .phase-action {
+  background: rgba(0, 136, 255, 0.1);
+  color: #66b2ff;
+  border: 1px solid rgba(0, 136, 255, 0.2);
+}
+.phase-card.blue-accent .phase-action:hover {
+  background: rgba(0, 136, 255, 0.2);
+}
+
+@media (min-width: 768px) {
+  .phases-grid {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  }
+}
