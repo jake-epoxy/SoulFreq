@@ -15,7 +15,7 @@ export default function Protocol({ onStartPhase }: ProtocolProps) {
           animate={{ opacity: 1, y: 0 }}
           className="protocol-title"
         >
-          The <span className="text-gradient">Ruach</span> Protocol
+          The <span className="text-gradient">SoulFreq</span> Protocol
         </motion.h2>
         <motion.p 
           initial={{ opacity: 0, y: 20 }}
