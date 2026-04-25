@@ -8,9 +8,9 @@ interface PaywallProps {
   isOverlay?: boolean;
 }
 
-const Paywall: React.FC<PaywallProps> = ({ onBack, isOverlay }) => {
+const Paywall: React.FC<PaywallProps> = ({ onBack, isOverlay = false }) => {
   // Replace this with your actual Stripe Payment Link
-  const STRIPE_PAYMENT_LINK = "#";
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/eVq28r5vseADc3V4CBe7m01';
 
   return (
     <div className={`paywall-container ${isOverlay ? 'overlay-mode' : ''}`}>
