@@ -381,9 +381,11 @@ export function useAudioEngine(options?: EngineOptions) {
                 gainNode.gain.linearRampToValueAtTime(0.0001, now + 1.0);
             }
             
-            // Restore volume after the wash finishes
-            gainNode.gain.setValueAtTime(0.0001, now + durationSeconds);
-            gainNode.gain.linearRampToValueAtTime(currentVol, now + durationSeconds + 3.0);
+            if (!wasSuspended) {
+                // Restore volume after the wash finishes
+                gainNode.gain.setValueAtTime(0.0001, now + durationSeconds);
+                gainNode.gain.linearRampToValueAtTime(currentVol, now + durationSeconds + 3.0);
+            }
         }
     });
 
@@ -496,6 +498,12 @@ export function useAudioEngine(options?: EngineOptions) {
         washMasterGain.disconnect();
         submersionFilter.disconnect();
         stereoPanner.disconnect();
+        
+        if (wasSuspended) {
+            ctx.suspend();
+            setIsPlaying(false);
+            masterGainRef.current?.gain.setValueAtTime(0, ctx.currentTime);
+        }
     }, (durationSeconds + 1) * 1000);
   }, [initEngine, isWashing]);
 
