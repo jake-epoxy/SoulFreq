@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Play, Pause, Sliders, Waves, ActivitySquare, Speaker, Zap, MoonStar, Anchor, Square } from 'lucide-react';
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import type { FrequencyChannel } from '../hooks/useAudioEngine';
+import Paywall from './Paywall';
 import './Studio.css';
 
 interface Config {
@@ -94,10 +95,15 @@ const PRESETS = [
 
 interface StudioProps {
   initialPreset?: string | null;
+  isPremium?: boolean;
 }
 
-export default function Studio({ initialPreset }: StudioProps) {
-  const { isPlaying, togglePlay, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine();
+export default function Studio({ initialPreset, isPremium }: StudioProps) {
+  const [showPaywall, setShowPaywall] = useState(false);
+  const { isPlaying, togglePlay, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine({
+    isPremium,
+    onCutoff: () => setShowPaywall(true)
+  });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [frequencies, setFrequencies] = useState<Config[]>(INITIAL_FREQUENCIES);
@@ -540,6 +546,19 @@ export default function Studio({ initialPreset }: StudioProps) {
 
         </div>
       </motion.div>
+      <AnimatePresence>
+        {showPaywall && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="paywall-overlay"
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)' }}
+          >
+            <Paywall onBack={() => {}} isOverlay={true} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

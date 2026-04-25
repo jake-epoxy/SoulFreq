@@ -5,31 +5,42 @@ import Studio from './components/Studio';
 import Assessment from './components/Assessment';
 import Protocol from './components/Protocol';
 import Paywall from './components/Paywall';
+import AuthWall from './components/AuthWall';
+import { supabase } from './lib/supabase';
 
-export type AppStage = 'hero' | 'assessment' | 'studio' | 'protocol';
+export type AppStage = 'hero' | 'assessment' | 'auth' | 'studio' | 'protocol';
 
 function App() {
   const [stage, setStage] = useState<AppStage>('hero');
   const [initialPreset, setInitialPreset] = useState<string | null>(null);
+  const [session, setSession] = useState<any>(null);
   
   // Premium Paywall State
   const [isPremium, setIsPremium] = useState(() => {
     return localStorage.getItem('kinesus_premium') === 'true';
   });
 
-  // Handle Stripe Redirect
+  // Handle Supabase Session & Stripe Redirect
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('payment') === 'success') {
       setIsPremium(true);
       localStorage.setItem('kinesus_premium', 'true');
-      
-      // Clean up the URL
       window.history.replaceState({}, '', window.location.pathname);
-      
-      // Send them straight to the protocol
       setStage('protocol');
     }
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
@@ -43,7 +54,21 @@ function App() {
         </div>
         <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
           <a href="#" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.9rem' }}>The Science</a>
-          <a href="#" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.9rem' }}>Testimonials</a>
+          {session ? (
+            <button 
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
+              onClick={() => supabase.auth.signOut().then(() => setStage('hero'))}
+            >
+              Sign Out
+            </button>
+          ) : (
+            <button 
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
+              onClick={() => setStage('auth')}
+            >
+              Log In
+            </button>
+          )}
           <button 
             style={{ padding: '0.5rem 1.5rem', borderRadius: '50px', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.9rem', cursor: 'pointer', background: stage === 'protocol' ? 'rgba(255,255,255,0.1)' : 'transparent' }}
             onClick={() => setStage('protocol')}
@@ -79,8 +104,26 @@ function App() {
             >
               <Assessment onComplete={(presetId) => {
                 setInitialPreset(presetId);
-                setStage('studio');
+                // If they already have an account, skip AuthWall
+                if (session) {
+                  setStage('studio');
+                } else {
+                  setStage('auth');
+                }
               }} />
+            </motion.div>
+          )}
+
+          {stage === 'auth' && (
+            <motion.div 
+              key="auth"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              style={{ width: '100%' }}
+            >
+              <AuthWall onComplete={() => setStage('studio')} />
             </motion.div>
           )}
 
@@ -92,7 +135,7 @@ function App() {
               transition={{ duration: 0.8, ease: "easeOut" }}
               style={{ width: '100%' }}
             >
-              <Studio initialPreset={initialPreset} />
+              <Studio initialPreset={initialPreset} isPremium={isPremium} />
             </motion.div>
           )}
 
@@ -117,7 +160,7 @@ function App() {
         </AnimatePresence>
       </main>
       
-      {stage !== 'assessment' && (
+      {stage !== 'assessment' && stage !== 'auth' && (
         <footer style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)', fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '4rem' }}>
           <p>&copy; 2026 Kinesus. High-End Frequency Engine.</p>
         </footer>

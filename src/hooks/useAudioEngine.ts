@@ -1,9 +1,47 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 
 export type FrequencyChannel = '174 Hz' | '396 Hz' | '432 Hz' | '528 Hz' | '852 Hz' | '963 Hz' | 'Alpha' | 'Theta' | 'Custom' | 'Vinyl' | 'Void' | 'Rain' | 'White';
 
-export function useAudioEngine() {
+export interface EngineOptions {
+  isPremium?: boolean;
+  onCutoff?: () => void;
+}
+
+export function useAudioEngine(options?: EngineOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const cutoffTimerRef = useRef<number | null>(null);
+  const playbackTimeRef = useRef<number>(0);
+  const CUTOFF_SECONDS = 120;
+  
+  useEffect(() => {
+    if (options?.isPremium) {
+      if (cutoffTimerRef.current) window.clearInterval(cutoffTimerRef.current);
+      return;
+    }
+
+    if (isPlaying) {
+      cutoffTimerRef.current = window.setInterval(() => {
+        playbackTimeRef.current += 1;
+        if (playbackTimeRef.current >= CUTOFF_SECONDS) {
+          if (audioCtxRef.current) {
+            audioCtxRef.current.suspend();
+          }
+          setIsPlaying(false);
+          if (options?.onCutoff) {
+            options.onCutoff();
+          }
+          if (cutoffTimerRef.current) window.clearInterval(cutoffTimerRef.current);
+        }
+      }, 1000);
+    } else {
+      if (cutoffTimerRef.current) window.clearInterval(cutoffTimerRef.current);
+    }
+
+    return () => {
+      if (cutoffTimerRef.current) window.clearInterval(cutoffTimerRef.current);
+    };
+  }, [isPlaying, options?.isPremium, options?.onCutoff]);
+
   const audioCtxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const channelGainsRef = useRef<Record<string, GainNode>>({});
@@ -288,6 +326,11 @@ export function useAudioEngine() {
   }, []);
 
   const triggerSweep = useCallback(async (startFreq: number, endFreq: number, durationSeconds: number) => {
+    if (!options?.isPremium && playbackTimeRef.current >= CUTOFF_SECONDS) {
+      if (options?.onCutoff) options.onCutoff();
+      return;
+    }
+
     if (!audioCtxRef.current) initEngine();
     const ctx = audioCtxRef.current;
     if (!ctx || !masterGainRef.current) return;

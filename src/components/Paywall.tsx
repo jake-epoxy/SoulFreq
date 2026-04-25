@@ -5,14 +5,15 @@ import './Paywall.css';
 
 interface PaywallProps {
   onBack: () => void;
+  isOverlay?: boolean;
 }
 
-const Paywall: React.FC<PaywallProps> = ({ onBack }) => {
+const Paywall: React.FC<PaywallProps> = ({ onBack, isOverlay }) => {
   // Replace this with your actual Stripe Payment Link
   const STRIPE_PAYMENT_LINK = "#";
 
   return (
-    <div className="paywall-container">
+    <div className={`paywall-container ${isOverlay ? 'overlay-mode' : ''}`}>
       <div className="paywall-content">
         <motion.div 
           className="paywall-header"
@@ -50,8 +51,8 @@ const Paywall: React.FC<PaywallProps> = ({ onBack }) => {
           <div className="feature-item">
             <Shield size={20} className="feature-icon" />
             <div className="feature-text">
-              <h4>Lifetime Access</h4>
-              <p>Pay once, master your kinetic energy forever.</p>
+              <h4>Premium Access</h4>
+              <p>Unrestricted access to the entire Kinetic Engine.</p>
             </div>
           </div>
         </motion.div>
@@ -63,11 +64,13 @@ const Paywall: React.FC<PaywallProps> = ({ onBack }) => {
           transition={{ delay: 0.4, duration: 0.5 }}
         >
           <a href={STRIPE_PAYMENT_LINK} className="unlock-button">
-            Unlock Full Access — $9
+            Unlock Full Access — $9 / Month
           </a>
-          <button className="back-button" onClick={onBack}>
-            Return to Studio
-          </button>
+          {!isOverlay && (
+            <button className="back-button" onClick={onBack}>
+              Return to Studio
+            </button>
+          )}
         </motion.div>
       </div>
     </div>
