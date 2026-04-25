@@ -352,7 +352,9 @@ export function useAudioEngine(options?: EngineOptions) {
 
     const now = ctx.currentTime;
 
-    if (ctx.state === 'suspended') {
+    const wasSuspended = ctx.state === 'suspended';
+
+    if (wasSuspended) {
       await ctx.resume();
       setIsPlaying(true);
       // Unmute master gain if it was paused
@@ -369,8 +371,15 @@ export function useAudioEngine(options?: EngineOptions) {
         const currentVol = channelVolumesRef.current[key] || 0;
         if (currentVol > 0.0001) {
             gainNode.gain.cancelScheduledValues(now);
-            gainNode.gain.setValueAtTime(currentVol, now);
-            gainNode.gain.linearRampToValueAtTime(0.0001, now + 1.0);
+            
+            if (wasSuspended) {
+                // If it was paused, instantly mute to prevent a blip when master gain unmutes
+                gainNode.gain.setValueAtTime(0.0001, now);
+            } else {
+                // If it was already playing, fade it out smoothly
+                gainNode.gain.setValueAtTime(currentVol, now);
+                gainNode.gain.linearRampToValueAtTime(0.0001, now + 1.0);
+            }
             
             // Restore volume after the wash finishes
             gainNode.gain.setValueAtTime(0.0001, now + durationSeconds);
