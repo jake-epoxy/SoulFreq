@@ -1,19 +1,19 @@
 import { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Sphere, Points, PointMaterial } from '@react-three/drei';
+import { Sphere, Points, PointMaterial, ScrollControls, Scroll, useScroll } from '@react-three/drei';
 import * as THREE from 'three';
+import { Activity } from 'lucide-react';
 
 function ParticleSphere() {
   const ref = useRef<THREE.Points>(null);
   const sphereRef = useRef<THREE.Mesh>(null);
   const innerSphereRef = useRef<THREE.Mesh>(null);
   
-  // Global mouse tracking (bypasses z-index blocking issues)
+  const scroll = useScroll();
   const mouse = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
-      // Normalize to -1 to +1
       mouse.current.x = (event.clientX / window.innerWidth) * 2 - 1;
       mouse.current.y = -(event.clientY / window.innerHeight) * 2 + 1;
     };
@@ -21,7 +21,6 @@ function ParticleSphere() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Generate random points for the inner resonance particles
   const count = 4000;
   const positions = useMemo(() => {
     const pos = new Float32Array(count * 3);
@@ -36,19 +35,36 @@ function ParticleSphere() {
     return pos;
   }, [count]);
 
+  const groupRef = useRef<THREE.Group>(null);
+
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
+    const offset = scroll.offset; // 0 to 1
     
+    // Scroll-based animations
+    if (groupRef.current) {
+      // Move sphere up and back as you scroll
+      groupRef.current.position.y = offset * 2;
+      groupRef.current.position.z = offset * -5;
+      
+      // Explode the scale at the middle page, then contract
+      const scaleBase = 1 + Math.sin(offset * Math.PI) * 1.5;
+      groupRef.current.scale.set(scaleBase, scaleBase, scaleBase);
+      
+      // Rotate wildly based on scroll
+      groupRef.current.rotation.x = offset * Math.PI * 2;
+    }
+
     if (ref.current) {
-      ref.current.rotation.y = time * 0.05;
+      ref.current.rotation.y = time * 0.05 + offset * 2;
       ref.current.rotation.z = time * 0.02;
     }
     
     if (sphereRef.current) {
       sphereRef.current.rotation.x = time * 0.08;
       sphereRef.current.rotation.y = time * 0.12;
-      const scale = 1 + Math.sin(time * 1.5) * 0.03;
-      sphereRef.current.scale.set(scale, scale, scale);
+      const pulse = 1 + Math.sin(time * 1.5) * 0.03;
+      sphereRef.current.scale.set(pulse, pulse, pulse);
     }
 
     if (innerSphereRef.current) {
@@ -56,65 +72,135 @@ function ParticleSphere() {
       innerSphereRef.current.rotation.y = -time * 0.15;
     }
     
-    // Smooth camera movement using global mouse ref
     const targetX = (mouse.current.x * Math.PI) / 8;
     const targetY = (mouse.current.y * Math.PI) / 8;
-    
     state.camera.position.x += (targetX - state.camera.position.x) * 0.05;
     state.camera.position.y += (targetY - state.camera.position.y) * 0.05;
     state.camera.lookAt(0, 0, 0);
   });
 
   return (
-    <group>
-      {/* Outer Geometric Wireframe (Cyan) */}
+    <group ref={groupRef}>
       <Sphere ref={sphereRef} args={[2.5, 32, 32]}>
-        <meshBasicMaterial 
-          color="#00f0ff" 
-          wireframe 
-          transparent 
-          opacity={0.12} 
-          blending={THREE.AdditiveBlending} 
-        />
+        <meshBasicMaterial color="#00f0ff" wireframe transparent opacity={0.12} blending={THREE.AdditiveBlending} />
       </Sphere>
-      
-      {/* Inner Geometric Wireframe (Purple) */}
       <Sphere ref={innerSphereRef} args={[2.0, 16, 16]}>
-        <meshBasicMaterial 
-          color="#7a00ff" 
-          wireframe 
-          transparent 
-          opacity={0.15} 
-          blending={THREE.AdditiveBlending} 
-        />
+        <meshBasicMaterial color="#7a00ff" wireframe transparent opacity={0.15} blending={THREE.AdditiveBlending} />
       </Sphere>
-
-      {/* Resonance Particles (White / Cyan mix) */}
       <Points ref={ref} positions={positions} stride={3}>
-        <PointMaterial
-          transparent
-          color="#88ffff"
-          size={0.025}
-          sizeAttenuation={true}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
+        <PointMaterial transparent color="#88ffff" size={0.025} sizeAttenuation={true} depthWrite={false} blending={THREE.AdditiveBlending} />
       </Points>
     </group>
   );
 }
 
-export default function ResonanceSphere() {
+// Custom component to fade HTML sections in and out based on scroll
+function HTMLSection({ page, children }: { page: number, children: React.ReactNode }) {
+  const scroll = useScroll();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useFrame(() => {
+    if (ref.current) {
+      // Calculate distance from current scroll to this page's center
+      // Scroll offset goes 0 to 1. Pages are 0, 0.5, 1 (for 3 pages)
+      const pageOffset = page / 2;
+      const distance = Math.abs(scroll.offset - pageOffset);
+      
+      // Fade out if further than 0.3 away
+      const opacity = Math.max(0, 1 - distance * 3);
+      ref.current.style.opacity = opacity.toString();
+      ref.current.style.transform = `translateY(${distance * 50}px)`;
+    }
+  });
+
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
-      {/* eventSource connects the mouse events to the whole screen even if canvas is in background */}
-      <Canvas 
-        camera={{ position: [0, 0, 7], fov: 60 }} 
-        style={{ background: 'transparent' }}
-      >
-        <fog attach="fog" args={['#05050A', 3, 12]} />
+    <div 
+      ref={ref}
+      style={{ 
+        position: 'absolute', 
+        top: `${page * 100}vh`, 
+        width: '100%', 
+        height: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        opacity: page === 0 ? 1 : 0 // initial state
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+interface ResonanceSphereProps {
+  onStart: () => void;
+}
+
+export default function ResonanceSphere({ onStart }: ResonanceSphereProps) {
+  return (
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', zIndex: 10, background: '#05050A' }}>
+      <Canvas camera={{ position: [0, 0, 7], fov: 60 }} style={{ background: 'transparent' }}>
+        <fog attach="fog" args={['#05050A', 3, 15]} />
         <ambientLight intensity={0.5} />
-        <ParticleSphere />
+        
+        <ScrollControls pages={3} damping={0.25}>
+          
+          <Scroll>
+            <ParticleSphere />
+          </Scroll>
+
+          <Scroll html style={{ width: '100%' }}>
+            
+            {/* Page 1: The Hook */}
+            <HTMLSection page={0}>
+              <div className="hero-content">
+                <div className="badge glass-panel" style={{ marginBottom: '2rem' }}>
+                  <Activity size={16} className="badge-icon" />
+                  <span>The Kinetic Protocol</span>
+                </div>
+                <h1 className="hero-title">
+                  Discover Your <span className="text-gradient">Frequency</span><br />
+                  Prescription.
+                </h1>
+                <p className="hero-subtitle">
+                  Scroll down to initialize the bio-resonance engine.
+                </p>
+              </div>
+            </HTMLSection>
+
+            {/* Page 2: The Science */}
+            <HTMLSection page={1}>
+              <div className="hero-content">
+                <h2 className="hero-title" style={{ fontSize: '3rem' }}>
+                  Rewire Your <span className="text-gradient">Nervous System</span>
+                </h2>
+                <p className="hero-subtitle" style={{ maxWidth: '800px', fontSize: '1.2rem' }}>
+                  Calibrate your mind, body, and spirit with scientifically backed 
+                  binaural beats, ambient soundscapes, and ancient solfeggio frequencies. 
+                  Our dynamic audio engine forces parasympathetic activation.
+                </p>
+              </div>
+            </HTMLSection>
+
+            {/* Page 3: The CTA */}
+            <HTMLSection page={2}>
+              <div className="hero-content">
+                <h2 className="hero-title" style={{ fontSize: '4rem', marginBottom: '3rem' }}>
+                  Ready to <span className="text-gradient">Sync</span>?
+                </h2>
+                <button
+                  onClick={onStart}
+                  className="cta-button glass-panel"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  Start Your Session
+                </button>
+              </div>
+            </HTMLSection>
+
+          </Scroll>
+        </ScrollControls>
       </Canvas>
     </div>
   );
