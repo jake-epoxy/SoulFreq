@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, AlertTriangle, Battery, Anchor, MoonStar, ChevronDown } from 'lucide-react';
 import BreathingPacer from './BreathingPacer';

@@ -52,7 +52,7 @@ export function useAudioEngine() {
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = `soulfreq-session-${Date.now()}.webm`;
+        a.download = `kinesus-session-${Date.now()}.webm`;
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {

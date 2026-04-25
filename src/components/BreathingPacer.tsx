@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Square } from 'lucide-react';
 import './BreathingPacer.css';
@@ -24,7 +24,7 @@ export default function BreathingPacer({
 
   // Breathing Loop
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
 
     if (phase === 'inhale') {
       timer = setTimeout(() => setPhase('exhale'), 2500); // 2.5s inhale
@@ -45,7 +45,7 @@ export default function BreathingPacer({
 
   // Hold Stopwatch
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (phase === 'hold') {
       interval = setInterval(() => {
         setHoldTime(prev => prev + 1);
