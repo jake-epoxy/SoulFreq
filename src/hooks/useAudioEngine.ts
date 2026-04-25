@@ -323,53 +323,52 @@ export function useAudioEngine() {
     sweepMasterGain.gain.setValueAtTime(1.0, now + durationSeconds - 2);
     sweepMasterGain.gain.linearRampToValueAtTime(0.01, now + durationSeconds);
     
-    // Add a Theta (4Hz) Tremolo to the whole drop for visceral "throbbing"
-    const tremoloGain = ctx.createGain();
-    tremoloGain.gain.value = 0.8; 
-    const lfo = ctx.createOscillator();
-    lfo.type = 'sine';
-    lfo.frequency.value = 4; // 4Hz
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.2; // 20% volume modulation
-    lfo.connect(lfoGain);
-    lfoGain.connect(tremoloGain.gain);
-    lfo.start(now);
-    lfo.stop(now + durationSeconds);
+    sweepMasterGain.connect(masterGainRef.current);
 
-    sweepMasterGain.connect(tremoloGain);
-    tremoloGain.connect(masterGainRef.current);
-    const centerFreq = 400; // Peak volume frequency for the Shepard envelope
-    const bellWidth = 2.0; // Width of the frequency bell curve
+    // 3D Spatial Delay Network (Haas Effect)
+    // Left ear gets the dry signal, Right ear gets the signal delayed by 15ms
+    // This tricks the brain into thinking the sound is physically outside the phone.
+    const spatialGain = ctx.createGain();
+    spatialGain.gain.value = 1;
     
-    // 7 Octaves spanning deep sub-bass to high treble
-    for (let i = -3; i <= 3; i++) {
+    const dryPan = ctx.createStereoPanner();
+    dryPan.pan.value = -1; 
+    
+    const delayNode = ctx.createDelay();
+    delayNode.delayTime.value = 0.015; // 15ms Haas delay
+    const delayPan = ctx.createStereoPanner();
+    delayPan.pan.value = 1;
+
+    dryPan.connect(spatialGain);
+    delayNode.connect(delayPan);
+    delayPan.connect(spatialGain);
+    spatialGain.connect(sweepMasterGain);
+
+    const centerFreq = 1600; // Shift peak volume up for the piercing "Ringing" effect
+    const bellWidth = 2.0; 
+    
+    // 6 Octaves of pure, piercing Sine waves
+    for (let i = -1; i <= 4; i++) {
         const octaveMultiplier = Math.pow(2, i);
         const f_start = startFreq * octaveMultiplier;
         const f_end = endFreq * octaveMultiplier;
         
-        // 1. Primary Oscillator (Sawtooth for richness and "grit")
-        const osc = ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(f_start, now);
-        osc.frequency.exponentialRampToValueAtTime(f_end, now + durationSeconds);
+        // Left Ear Oscillator (Pure Tone)
+        const leftOsc = ctx.createOscillator();
+        leftOsc.type = 'sine';
+        leftOsc.frequency.setValueAtTime(f_start, now);
+        leftOsc.frequency.exponentialRampToValueAtTime(f_end, now + durationSeconds);
         
-        // 2. Sub-oscillator (Sine) exactly one octave below for pure bass weight
-        const subOsc = ctx.createOscillator();
-        subOsc.type = 'sine';
-        subOsc.frequency.setValueAtTime(f_start / 2, now);
-        subOsc.frequency.exponentialRampToValueAtTime(f_end / 2, now + durationSeconds);
+        // Right Ear Oscillator (Binaural Detune)
+        const rightOsc = ctx.createOscillator();
+        rightOsc.type = 'sine';
+        // 14Hz offset creates a frantic binaural beat that demands attention
+        rightOsc.frequency.setValueAtTime(f_start + 14, now);
+        rightOsc.frequency.exponentialRampToValueAtTime(f_end + 14, now + durationSeconds);
 
-        // 3. Lowpass Filter to warm up the sawtooth and make it sound massive
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.Q.value = 1.0; 
-        filter.frequency.setValueAtTime(f_start * 1.5, now);
-        filter.frequency.exponentialRampToValueAtTime(f_end * 1.5, now + durationSeconds);
-        
-        // 4. Gain Node for the Gaussian Envelope (The Shepard Illusion)
+        // Gain Node for the Gaussian Envelope
         const gainNode = ctx.createGain();
         
-        // Calculate the volume curve based on frequency passing through the center
         const curveLength = 100;
         const volCurve = new Float32Array(curveLength);
         for(let j=0; j<curveLength; j++) {
@@ -378,40 +377,35 @@ export function useAudioEngine() {
             const octavesFromCenter = Math.log2(currentFreq / centerFreq);
             // Gaussian bell curve
             const amplitude = Math.exp(-(octavesFromCenter * octavesFromCenter) / (2 * bellWidth * bellWidth));
-            volCurve[j] = amplitude * 0.12; // Normalize to prevent clipping across 7 octaves
+            volCurve[j] = amplitude * 0.12; 
         }
         
         gainNode.gain.setValueCurveAtTime(volCurve, now, durationSeconds);
         
-        // 5. Spatial Panning to widen the higher octaves around the listener's head
-        const panner = ctx.createStereoPanner();
-        const panValue = i === 0 ? 0 : (i % 2 === 0 ? 0.6 : -0.6) * (Math.abs(i)/3);
-        panner.pan.value = panValue;
-
-        // Connections
-        osc.connect(filter);
-        subOsc.connect(filter);
-        filter.connect(gainNode);
-        gainNode.connect(panner);
-        panner.connect(sweepMasterGain);
+        // Connect oscillators to their envelope
+        leftOsc.connect(gainNode);
+        rightOsc.connect(gainNode);
         
-        osc.start(now);
-        subOsc.start(now);
-        osc.stop(now + durationSeconds);
-        subOsc.stop(now + durationSeconds);
+        // Split the enveloped signal into the 3D network
+        gainNode.connect(dryPan);
+        gainNode.connect(delayNode);
+        
+        leftOsc.start(now);
+        rightOsc.start(now);
+        leftOsc.stop(now + durationSeconds);
+        rightOsc.stop(now + durationSeconds);
         
         // Cleanup memory
-        osc.onended = () => {
-            osc.disconnect();
-            subOsc.disconnect();
-            filter.disconnect();
+        leftOsc.onended = () => {
+            leftOsc.disconnect();
+            rightOsc.disconnect();
             gainNode.disconnect();
-            panner.disconnect();
-            if (i === 3) {
+            if (i === 4) {
+                dryPan.disconnect();
+                delayPan.disconnect();
+                delayNode.disconnect();
+                spatialGain.disconnect();
                 sweepMasterGain.disconnect();
-                tremoloGain.disconnect();
-                lfoGain.disconnect();
-                lfo.disconnect();
             }
         };
     }
