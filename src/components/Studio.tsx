@@ -436,9 +436,9 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
             <button 
               className="cta-button"
               style={{ width: '100%', padding: '0.75rem', background: 'linear-gradient(90deg, #ff0055, #cc0044)', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
-              onClick={() => triggerSweep(800, 174, 15)}
+              onClick={() => triggerSweep(800, 174, 30)}
             >
-              Trigger Parasympathetic Drop (15s Sweep)
+              Trigger Parasympathetic Drop (30s Sweep)
             </button>
         </div>
 
