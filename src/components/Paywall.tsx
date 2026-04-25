@@ -63,7 +63,7 @@ const Paywall: React.FC<PaywallProps> = ({ onBack }) => {
           transition={{ delay: 0.4, duration: 0.5 }}
         >
           <a href={STRIPE_PAYMENT_LINK} className="unlock-button">
-            Unlock Full Access — $99
+            Unlock Full Access — $9
           </a>
           <button className="back-button" onClick={onBack}>
             Return to Studio
