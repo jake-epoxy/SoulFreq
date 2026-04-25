@@ -32,6 +32,13 @@ const INITIAL_AMBIENTS: Config[] = [
   { name: 'Vinyl', effect: 'ASMR Crackle Texture', value: 0 },
 ];
 
+const INITIAL_WASHES: Config[] = [
+  { name: 'Liquid', effect: 'Continuous Wavefolding Squelch', value: 0 },
+  { name: 'Ascender', effect: 'Infinite Shepard Tone Rise', value: 0 },
+  { name: 'Euphoric', effect: 'Lush Harmonic Submersion', value: 0 },
+  { name: 'Crystal', effect: 'Trippy High-Pitched FM Synth', value: 0 },
+];
+
 const PRESETS = [
   {
     id: 'grounding',
@@ -42,6 +49,7 @@ const PRESETS = [
     settings: {
       freqs: { '174 Hz': 0, '396 Hz': 60, '432 Hz': 80, '528 Hz': 0, '852 Hz': 0, '963 Hz': 0, 'Alpha': 10, 'Theta': 0 },
       ambients: { 'Void': 100, 'White': 0, 'Rain': 20, 'Vinyl': 10 },
+      washes: { 'Liquid': 0, 'Ascender': 0, 'Euphoric': 0, 'Crystal': 0 },
       custom: { vol: 0, base: 432, offset: 0, wave: 'sine' as OscillatorType, isoRate: 0, isoDepth: 0 }
     }
   },
@@ -54,6 +62,7 @@ const PRESETS = [
     settings: {
       freqs: { '174 Hz': 0, '396 Hz': 0, '432 Hz': 20, '528 Hz': 0, '852 Hz': 0, '963 Hz': 0, 'Alpha': 0, 'Theta': 60 },
       ambients: { 'Void': 100, 'White': 0, 'Rain': 40, 'Vinyl': 0 },
+      washes: { 'Liquid': 0, 'Ascender': 0, 'Euphoric': 0, 'Crystal': 0 },
       custom: { vol: 0, base: 432, offset: 0, wave: 'sine' as OscillatorType, isoRate: 0, isoDepth: 0 }
     }
   },
@@ -66,6 +75,7 @@ const PRESETS = [
     settings: {
       freqs: { '174 Hz': 40, '396 Hz': 90, '432 Hz': 0, '528 Hz': 0, '852 Hz': 0, '963 Hz': 0, 'Alpha': 0, 'Theta': 0 },
       ambients: { 'Void': 40, 'White': 0, 'Rain': 60, 'Vinyl': 0 },
+      washes: { 'Liquid': 0, 'Ascender': 0, 'Euphoric': 0, 'Crystal': 0 },
       custom: { vol: 0, base: 396, offset: 0, wave: 'sine' as OscillatorType, isoRate: 0, isoDepth: 0 }
     }
   },
@@ -78,6 +88,7 @@ const PRESETS = [
     settings: {
       freqs: { '174 Hz': 0, '396 Hz': 0, '432 Hz': 0, '528 Hz': 0, '852 Hz': 90, '963 Hz': 40, 'Alpha': 0, 'Theta': 0 },
       ambients: { 'Void': 80, 'White': 20, 'Rain': 0, 'Vinyl': 10 },
+      washes: { 'Liquid': 0, 'Ascender': 0, 'Euphoric': 0, 'Crystal': 0 },
       custom: { vol: 40, base: 852, offset: 0, wave: 'sawtooth' as OscillatorType, isoRate: 7.83, isoDepth: 100 }
     }
   },
@@ -90,6 +101,7 @@ const PRESETS = [
     settings: {
       freqs: { '174 Hz': 0, '396 Hz': 0, '432 Hz': 0, '528 Hz': 50, '852 Hz': 0, '963 Hz': 0, 'Alpha': 70, 'Theta': 0 },
       ambients: { 'Void': 30, 'White': 40, 'Rain': 20, 'Vinyl': 50 },
+      washes: { 'Liquid': 0, 'Ascender': 0, 'Euphoric': 0, 'Crystal': 0 },
       custom: { vol: 0, base: 432, offset: 0, wave: 'sine' as OscillatorType, isoRate: 0, isoDepth: 0 }
     }
   }
@@ -110,6 +122,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
   
   const [frequencies, setFrequencies] = useState<Config[]>(INITIAL_FREQUENCIES);
   const [ambients, setAmbients] = useState<Config[]>(INITIAL_AMBIENTS);
+  const [washes, setWashes] = useState<Config[]>(INITIAL_WASHES);
   const [customVol, setCustomVol] = useState(0);
   const [customBase, setCustomBase] = useState(432); 
   const [customOffset, setCustomOffset] = useState(0); 
@@ -221,6 +234,9 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
      const newAmbs = ambients.map(a => ({ ...a, value: preset.settings.ambients[a.name as keyof typeof preset.settings.ambients] }));
      setAmbients(newAmbs);
 
+     const newWashes = washes.map(w => ({ ...w, value: preset.settings.washes[w.name as keyof typeof preset.settings.washes] }));
+     setWashes(newWashes);
+
      setCustomVol(preset.settings.custom.vol);
      setCustomBase(preset.settings.custom.base);
      setCustomOffset(preset.settings.custom.offset);
@@ -231,6 +247,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
      // Instantly update Audio Engine
      newFreqs.forEach(f => setVolume(f.name, f.value));
      newAmbs.forEach(a => setVolume(a.name, a.value));
+     newWashes.forEach(w => setVolume(w.name, w.value));
      setVolume('Custom', preset.settings.custom.vol);
      updateCustomNode(preset.settings.custom.base, preset.settings.custom.offset, preset.settings.custom.wave);
      updateIsochronic(preset.settings.custom.isoRate, preset.settings.custom.isoDepth);
@@ -249,6 +266,14 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
     const updated = [...ambients];
     updated[idx].value = newValue;
     setAmbients(updated);
+    setVolume(updated[idx].name, newValue);
+  };
+
+  const handleWashChange = (idx: number, newValue: number) => {
+    setActivePreset(null);
+    const updated = [...washes];
+    updated[idx].value = newValue;
+    setWashes(updated);
     setVolume(updated[idx].name, newValue);
   };
 
@@ -278,6 +303,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
     const memory = {
       freqs: Object.fromEntries(frequencies.map(f => [f.name, f.value])),
       ambients: Object.fromEntries(ambients.map(a => [a.name, a.value])),
+      washes: Object.fromEntries(washes.map(w => [w.name, w.value])),
       custom: { vol: customVol, base: customBase, offset: customOffset, wave: customWave, isoRate, isoDepth }
     };
     localStorage.setItem('kinesus_memory_state', JSON.stringify(memory));
@@ -473,40 +499,43 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         <div style={{ marginBottom: '2rem', marginTop: '1rem', padding: '1.5rem', background: 'rgba(0, 240, 255, 0.05)', border: '1px solid rgba(0, 240, 255, 0.2)', borderRadius: '12px' }}>
             <h4 style={{ color: '#00F0FF', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Zap size={18} />
-              Kinetic Washes (Scroll Stoppers)
+              Continuous Trippy Washes
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            
+            <div className="sliders-container" style={{ marginBottom: '1.5rem' }}>
+              {washes.map((wash, idx) => (
+                <div key={idx} className="slider-group">
+                  <div className="slider-info">
+                    <span className="slider-name" style={{ color: '#00F0FF' }}>{wash.name}</span>
+                    <span className="slider-effect">{wash.effect}</span>
+                  </div>
+                  <div className="slider-track-wrapper">
+                      <input 
+                        type="range" min="0" max="100" value={wash.value}
+                        onChange={(e) => handleWashChange(idx, parseInt(e.target.value))}
+                        className="slider-input"
+                      />
+                      <div className="slider-track cyan-track">
+                        <motion.div animate={{ width: `${wash.value}%` }} transition={{ type: "spring", stiffness: 300, damping: 30 }} className="slider-fill" />
+                        <motion.div animate={{ left: `${wash.value}%` }} transition={{ type: "spring", stiffness: 300, damping: 30 }} className="slider-thumb" />
+                      </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ borderTop: '1px solid rgba(0, 240, 255, 0.1)', paddingTop: '1.5rem' }}>
+              <h4 style={{ color: '#FF0080', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                <Zap size={14} />
+                Instant Transient Effect
+              </h4>
               <button 
                 className="cta-button"
-                style={{ padding: '0.75rem', background: isWashing ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: isWashing ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
-                onClick={() => triggerSweep(432, 30, 'euphoric')}
+                style={{ width: '100%', padding: '0.75rem', background: isWashing ? 'rgba(255, 0, 128, 0.1)' : 'linear-gradient(90deg, #FF0080, #7928CA)', border: isWashing ? '1px solid rgba(255, 0, 128, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#FF0080' : 'white', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                onClick={() => triggerSweep(30)}
                 disabled={isWashing}
               >
-                Euphoric Wash
-              </button>
-              <button 
-                className="cta-button"
-                style={{ padding: '0.75rem', background: isWashing ? 'rgba(255, 0, 128, 0.1)' : 'linear-gradient(90deg, #FF0080, #7928CA)', border: isWashing ? '1px solid rgba(255, 0, 128, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#FF0080' : 'white', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
-                onClick={() => triggerSweep(432, 30, 'flashbang')}
-                disabled={isWashing}
-              >
-                Somatic Flashbang
-              </button>
-              <button 
-                className="cta-button"
-                style={{ padding: '0.75rem', background: isWashing ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(90deg, #00FF88, #008855)', border: isWashing ? '1px solid rgba(0, 255, 136, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#00FF88' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
-                onClick={() => triggerSweep(432, 30, 'liquid')}
-                disabled={isWashing}
-              >
-                Liquid Fold
-              </button>
-              <button 
-                className="cta-button"
-                style={{ padding: '0.75rem', background: isWashing ? 'rgba(255, 215, 0, 0.1)' : 'linear-gradient(90deg, #FFD700, #FF8C00)', border: isWashing ? '1px solid rgba(255, 215, 0, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#FFD700' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
-                onClick={() => triggerSweep(432, 30, 'ascender')}
-                disabled={isWashing}
-              >
-                Infinite Ascender
+                Trigger Somatic Flashbang Drop
               </button>
             </div>
         </div>
@@ -649,7 +678,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         )}
       </AnimatePresence>
       <OnboardingModal 
-        onInitiate={() => triggerSweep(432, 30)} 
+        onInitiate={() => triggerSweep(30)} 
         onSkip={() => {}} 
       />
     </section>
