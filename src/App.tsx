@@ -14,11 +14,33 @@ function App() {
   const [stage, setStage] = useState<AppStage>('hero');
   const [initialPreset, setInitialPreset] = useState<string | null>(null);
   const [session, setSession] = useState<any>(null);
-  
-  // Premium Paywall State
   const [isPremium, setIsPremium] = useState(false);
 
-  // Handle Supabase Session & Profile Sync
+  // Custom navigation to support native browser "Back" button
+  const navigate = (newStage: AppStage) => {
+    setStage(newStage);
+    // Push to history without modifying the URL, just to create a back-stack
+    window.history.pushState({ stage: newStage }, '', window.location.pathname + window.location.search);
+  };
+
+  useEffect(() => {
+    // Listen for browser back/forward buttons
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.stage) {
+        setStage(event.state.stage);
+      } else {
+        setStage('hero'); // Fallback to hero if no state
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    
+    // Setup initial history state so the first "back" click doesn't immediately exit the app
+    window.history.replaceState({ stage: 'hero' }, '', window.location.pathname + window.location.search);
+    
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   useEffect(() => {
     async function fetchProfile(user: any) {
       if (!user) {
@@ -51,7 +73,6 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Handle Stripe Redirect
   useEffect(() => {
     const checkPaymentSuccess = async () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -60,7 +81,6 @@ function App() {
         
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          // Permanently upgrade them in Supabase
           const { error } = await supabase
             .from('profiles')
             .update({ is_premium: true })
@@ -68,11 +88,10 @@ function App() {
             
           if (!error) {
             setIsPremium(true);
-            setStage('protocol');
+            navigate('protocol');
           }
         } else {
-            // Edge case: if they aren't logged in when redirected from stripe
-            setStage('auth');
+            navigate('auth');
         }
       }
     };
@@ -85,7 +104,7 @@ function App() {
       <header className="top-nav">
         <div 
           style={{ fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.5px', cursor: 'pointer' }}
-          onClick={() => setStage('hero')}
+          onClick={() => navigate('hero')}
         >
           Kinesus<span style={{ color: 'var(--brand-cyan)' }}>.</span>
         </div>
@@ -94,21 +113,21 @@ function App() {
           {session ? (
             <button 
               style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
-              onClick={() => supabase.auth.signOut().then(() => setStage('hero'))}
+              onClick={() => supabase.auth.signOut().then(() => navigate('hero'))}
             >
               Sign Out
             </button>
           ) : (
             <button 
               style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
-              onClick={() => setStage('auth')}
+              onClick={() => navigate('auth')}
             >
               Log In
             </button>
           )}
           <button 
             style={{ padding: '0.5rem 1.5rem', borderRadius: '50px', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.9rem', cursor: 'pointer', background: stage === 'protocol' ? 'rgba(255,255,255,0.1)' : 'transparent' }}
-            onClick={() => setStage('protocol')}
+            onClick={() => navigate('protocol')}
           >
             The Protocol
           </button>
@@ -126,7 +145,7 @@ function App() {
               transition={{ duration: 0.5 }}
               style={{ width: '100%' }}
             >
-              <Hero onStart={() => setStage('assessment')} />
+              <Hero onStart={() => navigate('assessment')} />
             </motion.div>
           )}
 
@@ -141,11 +160,10 @@ function App() {
             >
               <Assessment onComplete={(presetId) => {
                 setInitialPreset(presetId);
-                // If they already have an account, skip AuthWall
                 if (session) {
-                  setStage('studio');
+                  navigate('studio');
                 } else {
-                  setStage('auth');
+                  navigate('auth');
                 }
               }} />
             </motion.div>
@@ -160,7 +178,7 @@ function App() {
               transition={{ duration: 0.5 }}
               style={{ width: '100%' }}
             >
-              <AuthWall onComplete={() => setStage('studio')} />
+              <AuthWall onComplete={() => navigate('studio')} />
             </motion.div>
           )}
 
@@ -187,14 +205,14 @@ function App() {
               {isPremium ? (
                 <Protocol onStartPhase={(presetId) => {
                   setInitialPreset(presetId);
-                  setStage('studio');
+                  navigate('studio');
                 }} />
               ) : (
                 <Paywall onBack={() => {
                   if (session) {
-                    setStage('studio');
+                    navigate('studio');
                   } else {
-                    setStage('auth');
+                    navigate('auth');
                   }
                 }} />
               )}
