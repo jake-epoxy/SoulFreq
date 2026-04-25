@@ -100,7 +100,7 @@ interface StudioProps {
 
 export default function Studio({ initialPreset, isPremium }: StudioProps) {
   const [showPaywall, setShowPaywall] = useState(false);
-  const { isPlaying, togglePlay, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine({
+  const { isPlaying, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine({
     isPremium,
     onCutoff: () => setShowPaywall(true)
   });
@@ -347,10 +347,18 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
 
         {/* Center Console */}
         <motion.div className="panel glass-panel center-console" style={{ position: 'relative' }}>
+          
+          {!isPremium && (
+            <div className="freemium-timer" style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.3)', padding: '0.4rem 0.8rem', borderRadius: '50px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#ff6b6b' }}>
+              <Zap size={14} />
+              <span>{Math.max(0, 120 - elapsedTime)}s Free Trial Left</span>
+            </div>
+          )}
+
           <button 
             className={`record-action-button ${isRecording ? 'recording' : ''}`} 
-            onClick={isRecording ? stopRecording : startRecording}
-            title={isRecording ? "Stop & Download Session (.webm)" : "Record Studio Session"}
+            onClick={!isPremium ? () => setShowPaywall(true) : (isRecording ? stopRecording : startRecording)}
+            title={!isPremium ? "Premium Feature: Record Session" : (isRecording ? "Stop & Download Session (.webm)" : "Record Studio Session")}
           >
             {isRecording ? <Square fill="currentColor" size={14} style={{ color: '#ff2a2a' }} /> : <div className="record-dot" />}
             <span style={{ color: isRecording ? '#ff2a2a' : 'inherit' }}>{isRecording ? 'REC...' : 'REC'}</span>

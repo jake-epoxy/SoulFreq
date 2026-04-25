@@ -9,6 +9,7 @@ export interface EngineOptions {
 
 export function useAudioEngine(options?: EngineOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const cutoffTimerRef = useRef<number | null>(null);
   const playbackTimeRef = useRef<number>(0);
   const CUTOFF_SECONDS = 120;
@@ -22,6 +23,7 @@ export function useAudioEngine(options?: EngineOptions) {
     if (isPlaying) {
       cutoffTimerRef.current = window.setInterval(() => {
         playbackTimeRef.current += 1;
+        setElapsedTime(playbackTimeRef.current);
         if (playbackTimeRef.current >= CUTOFF_SECONDS) {
           if (audioCtxRef.current) {
             audioCtxRef.current.suspend();
@@ -456,5 +458,5 @@ export function useAudioEngine(options?: EngineOptions) {
     }
   }, [initEngine]);
 
-  return { isPlaying, togglePlay, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };
+  return { isPlaying, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };
 }
