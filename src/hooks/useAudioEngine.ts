@@ -53,6 +53,7 @@ export function useAudioEngine(options?: EngineOptions) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const channelGainsRef = useRef<Record<string, GainNode>>({});
+  const channelVolumesRef = useRef<Record<string, number>>({});
   const customLeftOscRef = useRef<OscillatorNode | null>(null);
   const customRightOscRef = useRef<OscillatorNode | null>(null);
   const customLFOOscRef = useRef<OscillatorNode | null>(null);
@@ -283,6 +284,8 @@ export function useAudioEngine(options?: EngineOptions) {
       if (channel === 'White') multiplier = 0.4;
 
       const normalize = Math.max((value / 100) * multiplier, 0.0001); 
+      channelVolumesRef.current[channel] = normalize;
+      gainNode.gain.cancelScheduledValues(ctx.currentTime);
       gainNode.gain.linearRampToValueAtTime(normalize, ctx.currentTime + 0.1);
     }
   }, [initEngine]);
@@ -347,17 +350,23 @@ export function useAudioEngine(options?: EngineOptions) {
     const ctx = audioCtxRef.current;
     if (!ctx || !masterGainRef.current) return;
 
+    const now = ctx.currentTime;
+
     if (ctx.state === 'suspended') {
       await ctx.resume();
       setIsPlaying(true);
+      // Unmute master gain if it was paused
+      masterGainRef.current.gain.cancelScheduledValues(now);
+      masterGainRef.current.gain.setValueAtTime(0, now);
+      masterGainRef.current.gain.linearRampToValueAtTime(1, now + 0.1);
     }
 
     setIsWashing(true);
-    const now = ctx.currentTime;
 
     // Fade out background presets completely to create a clean sonic canvas, then fade them back in later
-    Object.values(channelGainsRef.current).forEach(gainNode => {
-        const currentVol = gainNode.gain.value;
+    Object.keys(channelGainsRef.current).forEach(key => {
+        const gainNode = channelGainsRef.current[key];
+        const currentVol = channelVolumesRef.current[key] || 0;
         if (currentVol > 0.0001) {
             gainNode.gain.cancelScheduledValues(now);
             gainNode.gain.setValueAtTime(currentVol, now);
