@@ -300,17 +300,13 @@ export function useAudioEngine() {
 
     const now = ctx.currentTime;
 
-    // Fade out background presets so the drop is completely isolated
+    // Fade out background presets completely and keep them off (The drop resets the sonic environment)
     Object.values(channelGainsRef.current).forEach(gainNode => {
         const currentVol = gainNode.gain.value;
         if (currentVol > 0.0001) {
             gainNode.gain.cancelScheduledValues(now);
             gainNode.gain.setValueAtTime(currentVol, now);
             gainNode.gain.linearRampToValueAtTime(0.0001, now + 1.0);
-            
-            // Fade back in at the end of the drop
-            gainNode.gain.setValueAtTime(0.0001, now + durationSeconds - 2.0);
-            gainNode.gain.linearRampToValueAtTime(currentVol, now + durationSeconds);
         }
     });
 
@@ -325,48 +321,54 @@ export function useAudioEngine() {
     
     sweepMasterGain.connect(masterGainRef.current);
 
-    // 3D Spatial Delay Network (Haas Effect)
-    // Left ear gets the dry signal, Right ear gets the signal delayed by 15ms
-    // This tricks the brain into thinking the sound is physically outside the phone.
-    const spatialGain = ctx.createGain();
-    spatialGain.gain.value = 1;
+    // Massive Cavernous Delay Network
+    const delayL = ctx.createDelay();
+    delayL.delayTime.value = 0.4; // 400ms delay
+    const delayR = ctx.createDelay();
+    delayR.delayTime.value = 0.6; // 600ms delay
     
-    const dryPan = ctx.createStereoPanner();
-    dryPan.pan.value = -1; 
+    const feedbackL = ctx.createGain();
+    feedbackL.gain.value = 0.4; 
+    const feedbackR = ctx.createGain();
+    feedbackR.gain.value = 0.4;
+
+    const panL = ctx.createStereoPanner();
+    panL.pan.value = -0.8;
+    const panR = ctx.createStereoPanner();
+    panR.pan.value = 0.8;
+
+    delayL.connect(feedbackL);
+    feedbackL.connect(delayL);
+    delayL.connect(panL);
     
-    const delayNode = ctx.createDelay();
-    delayNode.delayTime.value = 0.015; // 15ms Haas delay
-    const delayPan = ctx.createStereoPanner();
-    delayPan.pan.value = 1;
+    delayR.connect(feedbackR);
+    feedbackR.connect(delayR);
+    delayR.connect(panR);
+    
+    panL.connect(sweepMasterGain);
+    panR.connect(sweepMasterGain);
 
-    dryPan.connect(spatialGain);
-    delayNode.connect(delayPan);
-    delayPan.connect(spatialGain);
-    spatialGain.connect(sweepMasterGain);
-
-    const centerFreq = 1600; // Shift peak volume up for the piercing "Ringing" effect
+    const centerFreq = 1600; 
     const bellWidth = 2.0; 
     
-    // 6 Octaves of pure, piercing Sine waves
-    for (let i = -1; i <= 4; i++) {
+    // 4 Octaves for a focused, pure ringing effect
+    for (let i = 0; i <= 3; i++) {
         const octaveMultiplier = Math.pow(2, i);
         const f_start = startFreq * octaveMultiplier;
         const f_end = endFreq * octaveMultiplier;
         
-        // Left Ear Oscillator (Pure Tone)
-        const leftOsc = ctx.createOscillator();
-        leftOsc.type = 'sine';
-        leftOsc.frequency.setValueAtTime(f_start, now);
-        leftOsc.frequency.exponentialRampToValueAtTime(f_end, now + durationSeconds);
+        // Pure ringing Sine
+        const osc1 = ctx.createOscillator();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(f_start, now);
+        osc1.frequency.exponentialRampToValueAtTime(f_end, now + durationSeconds);
         
-        // Right Ear Oscillator (Binaural Detune)
-        const rightOsc = ctx.createOscillator();
-        rightOsc.type = 'sine';
-        // 14Hz offset creates a frantic binaural beat that demands attention
-        rightOsc.frequency.setValueAtTime(f_start + 14, now);
-        rightOsc.frequency.exponentialRampToValueAtTime(f_end + 14, now + durationSeconds);
+        // Gentle Triangle for physical resonance, detuned slowly (2Hz) for majestic swirl
+        const osc2 = ctx.createOscillator();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(f_start + 2, now);
+        osc2.frequency.exponentialRampToValueAtTime(f_end + 2, now + durationSeconds);
 
-        // Gain Node for the Gaussian Envelope
         const gainNode = ctx.createGain();
         
         const curveLength = 100;
@@ -375,36 +377,36 @@ export function useAudioEngine() {
             const t = j / (curveLength - 1);
             const currentFreq = f_start * Math.pow(f_end / f_start, t);
             const octavesFromCenter = Math.log2(currentFreq / centerFreq);
-            // Gaussian bell curve
             const amplitude = Math.exp(-(octavesFromCenter * octavesFromCenter) / (2 * bellWidth * bellWidth));
-            volCurve[j] = amplitude * 0.12; 
+            volCurve[j] = amplitude * 0.15; 
         }
         
         gainNode.gain.setValueCurveAtTime(volCurve, now, durationSeconds);
         
-        // Connect oscillators to their envelope
-        leftOsc.connect(gainNode);
-        rightOsc.connect(gainNode);
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
         
-        // Split the enveloped signal into the 3D network
-        gainNode.connect(dryPan);
-        gainNode.connect(delayNode);
+        gainNode.connect(sweepMasterGain); // Dry signal
+        gainNode.connect(delayL); // Wet L
+        gainNode.connect(delayR); // Wet R
         
-        leftOsc.start(now);
-        rightOsc.start(now);
-        leftOsc.stop(now + durationSeconds);
-        rightOsc.stop(now + durationSeconds);
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + durationSeconds);
+        osc2.stop(now + durationSeconds);
         
         // Cleanup memory
-        leftOsc.onended = () => {
-            leftOsc.disconnect();
-            rightOsc.disconnect();
+        osc1.onended = () => {
+            osc1.disconnect();
+            osc2.disconnect();
             gainNode.disconnect();
-            if (i === 4) {
-                dryPan.disconnect();
-                delayPan.disconnect();
-                delayNode.disconnect();
-                spatialGain.disconnect();
+            if (i === 3) {
+                delayL.disconnect();
+                delayR.disconnect();
+                feedbackL.disconnect();
+                feedbackR.disconnect();
+                panL.disconnect();
+                panR.disconnect();
                 sweepMasterGain.disconnect();
             }
         };
