@@ -327,12 +327,16 @@ export function useAudioEngine(options?: EngineOptions) {
     return analyserRef.current;
   }, []);
 
+  const [isWashing, setIsWashing] = useState(false);
+
   const triggerSweep = useCallback(async (startFreq: number, durationSeconds: number) => {
     if (!options?.isPremium && playbackTimeRef.current >= CUTOFF_SECONDS) {
       if (options?.onCutoff) options.onCutoff();
       return;
     }
 
+    if (isWashing) return; // Prevent overlapping washes
+    
     if (!audioCtxRef.current) initEngine();
     const ctx = audioCtxRef.current;
     if (!ctx || !masterGainRef.current) return;
@@ -342,15 +346,20 @@ export function useAudioEngine(options?: EngineOptions) {
       setIsPlaying(true);
     }
 
+    setIsWashing(true);
     const now = ctx.currentTime;
 
-    // Fade out background presets completely to create a clean sonic canvas
+    // Fade out background presets completely to create a clean sonic canvas, then fade them back in later
     Object.values(channelGainsRef.current).forEach(gainNode => {
         const currentVol = gainNode.gain.value;
         if (currentVol > 0.0001) {
             gainNode.gain.cancelScheduledValues(now);
             gainNode.gain.setValueAtTime(currentVol, now);
             gainNode.gain.linearRampToValueAtTime(0.0001, now + 1.0);
+            
+            // Restore volume after the wash finishes
+            gainNode.gain.setValueAtTime(0.0001, now + durationSeconds);
+            gainNode.gain.linearRampToValueAtTime(currentVol, now + durationSeconds + 3.0);
         }
     });
 
@@ -459,11 +468,12 @@ export function useAudioEngine(options?: EngineOptions) {
 
     // Cleanup
     setTimeout(() => {
+        setIsWashing(false);
         washMasterGain.disconnect();
         submersionFilter.disconnect();
         stereoPanner.disconnect();
     }, (durationSeconds + 1) * 1000);
-  }, [initEngine]);
+  }, [initEngine, isWashing]);
 
-  return { isPlaying, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };
+  return { isPlaying, isWashing, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };
 }

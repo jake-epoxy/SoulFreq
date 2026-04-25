@@ -100,7 +100,7 @@ interface StudioProps {
 
 export default function Studio({ initialPreset, isPremium }: StudioProps) {
   const [showPaywall, setShowPaywall] = useState(false);
-  const { isPlaying, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine({
+  const { isPlaying, isWashing, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine({
     isPremium,
     onCutoff: () => setShowPaywall(true)
   });
@@ -435,10 +435,11 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
             </p>
             <button 
               className="cta-button"
-              style={{ width: '100%', padding: '0.75rem', background: 'linear-gradient(90deg, #00F0FF, #0088FF)', border: 'none', borderRadius: '8px', color: 'black', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 0 20px rgba(0, 240, 255, 0.3)' }}
+              style={{ width: '100%', padding: '0.75rem', background: isWashing ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: isWashing ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', boxShadow: isWashing ? 'none' : '0 0 20px rgba(0, 240, 255, 0.3)', transition: 'all 0.3s ease' }}
               onClick={() => triggerSweep(432, 30)}
+              disabled={isWashing}
             >
-              Trigger Euphoric Wash (30s)
+              {isWashing ? 'Submerging...' : 'Trigger Euphoric Wash (30s)'}
             </button>
         </div>
 
