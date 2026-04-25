@@ -47,6 +47,12 @@ function App() {
         setIsPremium(false);
         return;
       }
+      
+      // Developer Override
+      if (user.email === 'jakeflowers222@gmail.com') {
+        setIsPremium(true);
+        return;
+      }
       const { data } = await supabase
         .from('profiles')
         .select('is_premium')
