@@ -298,14 +298,30 @@ export function useAudioEngine() {
       setIsPlaying(true);
     }
 
+    const now = ctx.currentTime;
+
+    // Fade out background presets so the drop is completely isolated
+    Object.values(channelGainsRef.current).forEach(gainNode => {
+        const currentVol = gainNode.gain.value;
+        if (currentVol > 0.0001) {
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(currentVol, now);
+            gainNode.gain.linearRampToValueAtTime(0.0001, now + 1.0);
+            
+            // Fade back in at the end of the drop
+            gainNode.gain.setValueAtTime(0.0001, now + durationSeconds - 2.0);
+            gainNode.gain.linearRampToValueAtTime(currentVol, now + durationSeconds);
+        }
+    });
+
     // Master gain for the entire sweep effect
     const sweepMasterGain = ctx.createGain();
     sweepMasterGain.gain.value = 0.01;
     // Fade in over 100ms to prevent clicking
-    sweepMasterGain.gain.exponentialRampToValueAtTime(1.0, ctx.currentTime + 0.1);
+    sweepMasterGain.gain.exponentialRampToValueAtTime(1.0, now + 0.1);
     // Fade out smoothly at the end
-    sweepMasterGain.gain.setValueAtTime(1.0, ctx.currentTime + durationSeconds - 2);
-    sweepMasterGain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + durationSeconds);
+    sweepMasterGain.gain.setValueAtTime(1.0, now + durationSeconds - 2);
+    sweepMasterGain.gain.linearRampToValueAtTime(0.01, now + durationSeconds);
     
     // Add a Theta (4Hz) Tremolo to the whole drop for visceral "throbbing"
     const tremoloGain = ctx.createGain();
@@ -317,13 +333,11 @@ export function useAudioEngine() {
     lfoGain.gain.value = 0.2; // 20% volume modulation
     lfo.connect(lfoGain);
     lfoGain.connect(tremoloGain.gain);
-    lfo.start(ctx.currentTime);
-    lfo.stop(ctx.currentTime + durationSeconds);
+    lfo.start(now);
+    lfo.stop(now + durationSeconds);
 
     sweepMasterGain.connect(tremoloGain);
     tremoloGain.connect(masterGainRef.current);
-
-    const now = ctx.currentTime;
     const centerFreq = 400; // Peak volume frequency for the Shepard envelope
     const bellWidth = 2.0; // Width of the frequency bell curve
     
