@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Sliders, Waves, ActivitySquare, Speaker, Zap, MoonStar, Anchor, Square } from 'lucide-react';
+import { Play, Pause, Sliders, Waves, ActivitySquare, Speaker, Zap, MoonStar, Anchor, Square, X } from 'lucide-react';
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import type { FrequencyChannel } from '../hooks/useAudioEngine';
 import Paywall from './Paywall';
@@ -563,7 +563,15 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
             className="paywall-overlay"
             style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)' }}
           >
-            <Paywall onBack={() => {}} isOverlay={true} />
+            {elapsedTime < 120 && (
+              <button 
+                onClick={() => setShowPaywall(false)}
+                style={{ position: 'absolute', top: '2rem', right: '2rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', zIndex: 101, backdropFilter: 'blur(10px)' }}
+              >
+                <X size={20} />
+              </button>
+            )}
+            <Paywall onBack={() => setShowPaywall(false)} isOverlay={true} />
           </motion.div>
         )}
       </AnimatePresence>
