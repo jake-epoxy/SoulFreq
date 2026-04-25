@@ -436,7 +436,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
             <button 
               className="cta-button"
               style={{ width: '100%', padding: '0.75rem', background: 'linear-gradient(90deg, #00F0FF, #0088FF)', border: 'none', borderRadius: '8px', color: 'black', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 0 20px rgba(0, 240, 255, 0.3)' }}
-              onClick={() => triggerSweep(432, 100, 30)}
+              onClick={() => triggerSweep(432, 30)}
             >
               Trigger Euphoric Wash (30s)
             </button>

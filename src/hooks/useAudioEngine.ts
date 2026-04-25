@@ -327,7 +327,7 @@ export function useAudioEngine(options?: EngineOptions) {
     return analyserRef.current;
   }, []);
 
-  const triggerSweep = useCallback(async (startFreq: number, endFreq: number, durationSeconds: number) => {
+  const triggerSweep = useCallback(async (startFreq: number, durationSeconds: number) => {
     if (!options?.isPremium && playbackTimeRef.current >= CUTOFF_SECONDS) {
       if (options?.onCutoff) options.onCutoff();
       return;
