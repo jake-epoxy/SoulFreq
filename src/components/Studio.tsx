@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Sliders, Waves, ActivitySquare, Speaker, Zap, MoonStar, Anchor, Square, X } from 'lucide-react';
 import { useAudioEngine } from '../hooks/useAudioEngine';
@@ -626,7 +627,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         </div>
       </motion.div>
       <AnimatePresence>
-        {showPaywall && (
+        {showPaywall && createPortal(
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -643,7 +644,8 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
               </button>
             )}
             <Paywall onBack={() => setShowPaywall(false)} isOverlay={true} />
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
       <OnboardingModal 
