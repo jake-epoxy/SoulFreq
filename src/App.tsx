@@ -1,15 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Hero from './components/Hero';
 import Studio from './components/Studio';
 import Assessment from './components/Assessment';
 import Protocol from './components/Protocol';
+import Paywall from './components/Paywall';
 
 export type AppStage = 'hero' | 'assessment' | 'studio' | 'protocol';
 
 function App() {
   const [stage, setStage] = useState<AppStage>('hero');
   const [initialPreset, setInitialPreset] = useState<string | null>(null);
+  
+  // Premium Paywall State
+  const [isPremium, setIsPremium] = useState(() => {
+    return localStorage.getItem('kinesus_premium') === 'true';
+  });
+
+  // Handle Stripe Redirect
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+      setIsPremium(true);
+      localStorage.setItem('kinesus_premium', 'true');
+      
+      // Clean up the URL
+      window.history.replaceState({}, '', window.location.pathname);
+      
+      // Send them straight to the protocol
+      setStage('protocol');
+    }
+  }, []);
 
   return (
     <>
@@ -18,7 +39,7 @@ function App() {
           style={{ fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.5px', cursor: 'pointer' }}
           onClick={() => setStage('hero')}
         >
-          SoulFreq<span style={{ color: 'var(--brand-cyan)' }}>.</span>
+          Kinesus<span style={{ color: 'var(--brand-cyan)' }}>.</span>
         </div>
         <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
           <a href="#" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.9rem' }}>The Science</a>
@@ -83,10 +104,14 @@ function App() {
               transition={{ duration: 0.6, ease: "easeOut" }}
               style={{ width: '100%' }}
             >
-              <Protocol onStartPhase={(presetId) => {
-                setInitialPreset(presetId);
-                setStage('studio');
-              }} />
+              {isPremium ? (
+                <Protocol onStartPhase={(presetId) => {
+                  setInitialPreset(presetId);
+                  setStage('studio');
+                }} />
+              ) : (
+                <Paywall onBack={() => setStage('studio')} />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -94,7 +119,7 @@ function App() {
       
       {stage !== 'assessment' && (
         <footer style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)', fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '4rem' }}>
-          <p>&copy; 2026 SoulFreq. High-End Frequency Engine.</p>
+          <p>&copy; 2026 Kinesus. High-End Frequency Engine.</p>
         </footer>
       )}
     </>
