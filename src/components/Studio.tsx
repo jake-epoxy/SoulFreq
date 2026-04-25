@@ -286,6 +286,16 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         <p className="studio-subtitle">Select a curated journey, or customize your own stack.</p>
       </div>
 
+      {!isPremium && (
+        <div 
+          className="freemium-timer" 
+          style={{ position: 'fixed', top: '2rem', right: '2rem', background: 'rgba(15, 15, 20, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,50,50,0.3)', padding: '0.6rem 1.2rem', borderRadius: '50px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 700, color: '#ff6b6b', zIndex: 50, boxShadow: '0 10px 30px rgba(255,50,50,0.1)' }}
+        >
+          <Zap size={16} />
+          <span>{Math.max(0, 120 - elapsedTime)}s Trial Left</span>
+        </div>
+      )}
+
       {/* Journeys / Presets */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -348,13 +358,6 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         {/* Center Console */}
         <motion.div className="panel glass-panel center-console" style={{ position: 'relative' }}>
           
-          {!isPremium && (
-            <div className="freemium-timer" style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.3)', padding: '0.4rem 0.8rem', borderRadius: '50px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#ff6b6b' }}>
-              <Zap size={14} />
-              <span>{Math.max(0, 120 - elapsedTime)}s Free Trial Left</span>
-            </div>
-          )}
-
           <button 
             className={`record-action-button ${isRecording ? 'recording' : ''}`} 
             onClick={!isPremium ? () => setShowPaywall(true) : (isRecording ? stopRecording : startRecording)}
