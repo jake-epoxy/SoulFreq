@@ -97,7 +97,7 @@ interface StudioProps {
 }
 
 export default function Studio({ initialPreset }: StudioProps) {
-  const { isPlaying, togglePlay, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording } = useAudioEngine();
+  const { isPlaying, togglePlay, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [frequencies, setFrequencies] = useState<Config[]>(INITIAL_FREQUENCIES);
@@ -419,7 +419,7 @@ export default function Studio({ initialPreset }: StudioProps) {
             <button 
               className="cta-button"
               style={{ width: '100%', padding: '0.75rem', background: 'linear-gradient(90deg, #ff0055, #cc0044)', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
-              onClick={() => useAudioEngine().triggerSweep(800, 174, 15)}
+              onClick={() => triggerSweep(800, 174, 15)}
             >
               Trigger Golden Sweep (15s Drop)
             </button>
