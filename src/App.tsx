@@ -190,7 +190,13 @@ function App() {
                   setStage('studio');
                 }} />
               ) : (
-                <Paywall onBack={() => setStage('studio')} />
+                <Paywall onBack={() => {
+                  if (session) {
+                    setStage('studio');
+                  } else {
+                    setStage('auth');
+                  }
+                }} />
               )}
             </motion.div>
           )}
