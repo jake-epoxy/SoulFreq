@@ -4,6 +4,7 @@ import { Play, Pause, Sliders, Waves, ActivitySquare, Speaker, Zap, MoonStar, An
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import type { FrequencyChannel } from '../hooks/useAudioEngine';
 import Paywall from './Paywall';
+import OnboardingModal from './OnboardingModal';
 import './Studio.css';
 
 interface Config {
@@ -426,21 +427,44 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         </div>
 
         <div style={{ marginBottom: '2rem', marginTop: '1rem', padding: '1.5rem', background: 'rgba(0, 240, 255, 0.05)', border: '1px solid rgba(0, 240, 255, 0.2)', borderRadius: '12px' }}>
-            <h4 style={{ color: '#00F0FF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Waves size={18} />
-              The Euphoric Wash
+            <h4 style={{ color: '#00F0FF', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Zap size={18} />
+              Kinetic Washes (Scroll Stoppers)
             </h4>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-              Trigger a deeply pleasurable, 30-second submersion effect. Mathematically perfect golden ratio chords pan outward while a warm acoustic filter wraps around your auditory cortex to melt anxiety.
-            </p>
-            <button 
-              className="cta-button"
-              style={{ width: '100%', padding: '0.75rem', background: isWashing ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: isWashing ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', boxShadow: isWashing ? 'none' : '0 0 20px rgba(0, 240, 255, 0.3)', transition: 'all 0.3s ease' }}
-              onClick={() => triggerSweep(432, 30)}
-              disabled={isWashing}
-            >
-              {isWashing ? 'Submerging...' : 'Trigger Euphoric Wash (30s)'}
-            </button>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <button 
+                className="cta-button"
+                style={{ padding: '0.75rem', background: isWashing ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: isWashing ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                onClick={() => triggerSweep(432, 30, 'euphoric')}
+                disabled={isWashing}
+              >
+                Euphoric Wash
+              </button>
+              <button 
+                className="cta-button"
+                style={{ padding: '0.75rem', background: isWashing ? 'rgba(255, 0, 128, 0.1)' : 'linear-gradient(90deg, #FF0080, #7928CA)', border: isWashing ? '1px solid rgba(255, 0, 128, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#FF0080' : 'white', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                onClick={() => triggerSweep(432, 30, 'flashbang')}
+                disabled={isWashing}
+              >
+                Somatic Flashbang
+              </button>
+              <button 
+                className="cta-button"
+                style={{ padding: '0.75rem', background: isWashing ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(90deg, #00FF88, #008855)', border: isWashing ? '1px solid rgba(0, 255, 136, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#00FF88' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                onClick={() => triggerSweep(432, 30, 'liquid')}
+                disabled={isWashing}
+              >
+                Liquid Fold
+              </button>
+              <button 
+                className="cta-button"
+                style={{ padding: '0.75rem', background: isWashing ? 'rgba(255, 215, 0, 0.1)' : 'linear-gradient(90deg, #FFD700, #FF8C00)', border: isWashing ? '1px solid rgba(255, 215, 0, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#FFD700' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                onClick={() => triggerSweep(432, 30, 'ascender')}
+                disabled={isWashing}
+              >
+                Infinite Ascender
+              </button>
+            </div>
         </div>
 
         <div className="custom-controls-grid">
@@ -579,6 +603,10 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
           </motion.div>
         )}
       </AnimatePresence>
+      <OnboardingModal 
+        onInitiate={() => triggerSweep(432, 30)} 
+        onSkip={() => {}} 
+      />
     </section>
   );
 }
