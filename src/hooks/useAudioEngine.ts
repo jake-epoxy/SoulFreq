@@ -9,9 +9,13 @@ export interface EngineOptions {
 
 export function useAudioEngine(options?: EngineOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  
+  // Initialize timer from localStorage
+  const initialTime = typeof window !== 'undefined' ? parseInt(localStorage.getItem('kinesus_free_trial_time') || '0', 10) : 0;
+  
+  const [elapsedTime, setElapsedTime] = useState(initialTime);
   const cutoffTimerRef = useRef<number | null>(null);
-  const playbackTimeRef = useRef<number>(0);
+  const playbackTimeRef = useRef<number>(initialTime);
   const CUTOFF_SECONDS = 120;
   
   useEffect(() => {
@@ -24,6 +28,8 @@ export function useAudioEngine(options?: EngineOptions) {
       cutoffTimerRef.current = window.setInterval(() => {
         playbackTimeRef.current += 1;
         setElapsedTime(playbackTimeRef.current);
+        localStorage.setItem('kinesus_free_trial_time', playbackTimeRef.current.toString());
+        
         if (playbackTimeRef.current >= CUTOFF_SECONDS) {
           if (audioCtxRef.current) {
             audioCtxRef.current.suspend();
