@@ -287,10 +287,16 @@ export function useAudioEngine() {
     return analyserRef.current;
   }, []);
 
-  const triggerSweep = useCallback((startFreq: number, endFreq: number, durationSeconds: number) => {
+  const triggerSweep = useCallback(async (startFreq: number, endFreq: number, durationSeconds: number) => {
     if (!audioCtxRef.current) initEngine();
     const ctx = audioCtxRef.current;
     if (!ctx || !masterGainRef.current) return;
+
+    // Ensure the audio context is active so the drop plays immediately
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+      setIsPlaying(true);
+    }
 
     // Master gain for the entire sweep effect
     const sweepMasterGain = ctx.createGain();
