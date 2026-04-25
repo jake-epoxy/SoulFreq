@@ -255,6 +255,32 @@ export function useAudioEngine(options?: EngineOptions) {
     createAmbientNoise('pink', 'Rain');
     createAmbientNoise('white', 'White');
     
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Kinetic Protocol',
+        artist: 'Kinesus',
+        album: 'Somatic Mastery',
+        artwork: [
+          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+
+      navigator.mediaSession.setActionHandler('play', async () => {
+        if (audioCtxRef.current) {
+          await audioCtxRef.current.resume();
+          setIsPlaying(true);
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('pause', async () => {
+        if (audioCtxRef.current) {
+          await audioCtxRef.current.suspend();
+          setIsPlaying(false);
+        }
+      });
+    }
+    
     ctx.suspend();
   }, []);
 

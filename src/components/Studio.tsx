@@ -273,6 +273,34 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
     updateIsochronic(isoRate, isoDepth); 
   };
 
+  const saveToMemory = () => {
+    const memory = {
+      freqs: Object.fromEntries(frequencies.map(f => [f.name, f.value])),
+      ambients: Object.fromEntries(ambients.map(a => [a.name, a.value])),
+      custom: { vol: customVol, base: customBase, offset: customOffset, wave: customWave, isoRate, isoDepth }
+    };
+    localStorage.setItem('kinesus_memory_state', JSON.stringify(memory));
+    alert('Protocol Saved to Memory.');
+  };
+
+  const loadFromMemory = () => {
+    const memory = localStorage.getItem('kinesus_memory_state');
+    if (!memory) {
+      alert('No protocol saved in memory yet.');
+      return;
+    }
+    const parsed = JSON.parse(memory);
+    
+    applyPreset({
+       id: 'memory',
+       title: 'Memory State',
+       desc: 'Loaded',
+       icon: Zap,
+       color: 'preset-cyan',
+       settings: parsed
+    });
+  };
+
   return (
     <section className="studio-container">
       <div className="studio-header">
@@ -325,6 +353,21 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
            );
         })}
       </motion.div>
+
+      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+        <button 
+          onClick={saveToMemory}
+          style={{ padding: '0.75rem 1.5rem', background: 'rgba(0, 240, 255, 0.1)', border: '1px solid rgba(0, 240, 255, 0.3)', borderRadius: '8px', color: '#00F0FF', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <Zap size={16} /> Save Protocol to Memory
+        </button>
+        <button 
+          onClick={loadFromMemory}
+          style={{ padding: '0.75rem 1.5rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <Anchor size={16} /> Load Saved Protocol
+        </button>
+      </div>
 
       <div className="studio-grid" style={{ marginTop: '3rem' }}>
         {/* Frequencies Panel */}
