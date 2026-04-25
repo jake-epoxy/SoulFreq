@@ -5,30 +5,18 @@ import './Hero.css';
 interface HeroProps {
   onStart: () => void;
 }
+import ResonanceSphere from './ResonanceSphere';
 
 export default function Hero({ onStart }: HeroProps) {
   return (
     <section className="hero-container">
-      {/* Background glow elements */}
-      <div className="cyber-grid"></div>
-      <div className="glow-sphere cyan-glow"></div>
-      <div className="glow-sphere purple-glow"></div>
+      {/* 3D WebGL Background */}
+      <ResonanceSphere />
 
-      <div className="mandala-container">
-        <motion.svg 
-           viewBox="0 0 200 200" 
-           className="mandala"
-           animate={{ rotate: 360 }}
-           transition={{ duration: 80, ease: "linear", repeat: Infinity }}
-        >
-          <circle cx="100" cy="100" r="90" stroke="rgba(0, 240, 255, 0.1)" strokeWidth="0.5" fill="none" strokeDasharray="2 4" />
-          <circle cx="100" cy="100" r="80" stroke="rgba(0, 240, 255, 0.2)" strokeWidth="1" fill="none" />
-          <circle cx="100" cy="100" r="60" stroke="rgba(122, 0, 255, 0.3)" strokeWidth="1" fill="none" />
-          <path d="M100 20 L100 180 M20 100 L180 100 M43 43 L157 157 M43 157 L157 43" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1" />
-          <circle cx="100" cy="100" r="40" stroke="rgba(0, 240, 255, 0.5)" strokeWidth="2" strokeDasharray="4 4" fill="none" />
-          <circle cx="100" cy="100" r="20" stroke="rgba(122, 0, 255, 0.6)" strokeWidth="1" fill="none" />
-        </motion.svg>
-      </div>
+      {/* Background glow elements */}
+      <div className="cyber-grid" style={{ zIndex: 1, pointerEvents: 'none' }}></div>
+      <div className="glow-sphere cyan-glow" style={{ zIndex: 1, pointerEvents: 'none' }}></div>
+      <div className="glow-sphere purple-glow" style={{ zIndex: 1, pointerEvents: 'none' }}></div>
 
       <div className="hero-content">
         <motion.div
