@@ -82,14 +82,14 @@ function App() {
 
   return (
     <>
-      <header style={{ position: 'absolute', top: 0, left: 0, width: '100%', padding: '2rem', display: 'flex', justifyContent: 'space-between', zIndex: 100 }}>
+      <header className="top-nav">
         <div 
           style={{ fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.5px', cursor: 'pointer' }}
           onClick={() => setStage('hero')}
         >
           Kinesus<span style={{ color: 'var(--brand-cyan)' }}>.</span>
         </div>
-        <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+        <nav className="top-nav-links">
           <a href="#" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.9rem' }}>The Science</a>
           {session ? (
             <button 
