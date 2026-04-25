@@ -16,31 +16,68 @@ function App() {
   const [session, setSession] = useState<any>(null);
   
   // Premium Paywall State
-  const [isPremium, setIsPremium] = useState(() => {
-    return localStorage.getItem('kinesus_premium') === 'true';
-  });
+  const [isPremium, setIsPremium] = useState(false);
 
-  // Handle Supabase Session & Stripe Redirect
+  // Handle Supabase Session & Profile Sync
   useEffect(() => {
+    async function fetchProfile(user: any) {
+      if (!user) {
+        setIsPremium(false);
+        return;
+      }
+      const { data } = await supabase
+        .from('profiles')
+        .select('is_premium')
+        .eq('id', user.id)
+        .single();
+        
+      if (data && data.is_premium) {
+        setIsPremium(true);
+      }
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      fetchProfile(session?.user);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      fetchProfile(session?.user);
     });
 
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('payment') === 'success') {
-      setIsPremium(true);
-      localStorage.setItem('kinesus_premium', 'true');
-      window.history.replaceState({}, '', window.location.pathname);
-      setStage('protocol');
-    }
-
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Handle Stripe Redirect
+  useEffect(() => {
+    const checkPaymentSuccess = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('payment') === 'success') {
+        window.history.replaceState({}, '', window.location.pathname);
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Permanently upgrade them in Supabase
+          const { error } = await supabase
+            .from('profiles')
+            .update({ is_premium: true })
+            .eq('id', session.user.id);
+            
+          if (!error) {
+            setIsPremium(true);
+            setStage('protocol');
+          }
+        } else {
+            // Edge case: if they aren't logged in when redirected from stripe
+            setStage('auth');
+        }
+      }
+    };
+    
+    checkPaymentSuccess();
   }, []);
 
   return (
