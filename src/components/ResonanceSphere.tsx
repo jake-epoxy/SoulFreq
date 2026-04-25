@@ -90,13 +90,13 @@ function ParticleSphere() {
       <group ref={groupRef}>
         <Sphere ref={sphereRef} args={[2.5, 32, 32]}>
           {/* Multiply colors to trigger Bloom threshold */}
-          <meshBasicMaterial color={[0, 2.4, 2.55]} wireframe transparent opacity={0.15} blending={THREE.AdditiveBlending} />
+          <meshBasicMaterial color={[0, 2.4, 2.55]} wireframe transparent opacity={0.06} blending={THREE.AdditiveBlending} />
         </Sphere>
         <Sphere ref={innerSphereRef} args={[2.0, 16, 16]}>
-          <meshBasicMaterial color={[1.2, 0, 2.55]} wireframe transparent opacity={0.2} blending={THREE.AdditiveBlending} />
+          <meshBasicMaterial color={[1.2, 0, 2.55]} wireframe transparent opacity={0.1} blending={THREE.AdditiveBlending} />
         </Sphere>
         <Points ref={ref} positions={positions} stride={3}>
-          <PointMaterial transparent color={[2, 2, 2]} size={0.03} sizeAttenuation={true} depthWrite={false} blending={THREE.AdditiveBlending} />
+          <PointMaterial transparent color={[2, 2, 2]} size={0.025} sizeAttenuation={true} depthWrite={false} blending={THREE.AdditiveBlending} />
         </Points>
       </group>
     </>
@@ -137,8 +137,8 @@ export default function ResonanceSphere({ onStart }: ResonanceSphereProps) {
         
         {/* Post Processing Pipeline for Cinematic Wow Factor */}
         <EffectComposer>
-          <Bloom luminanceThreshold={1} luminanceSmoothing={0.9} intensity={2} />
-          <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002, 0.002)} />
+          <Bloom luminanceThreshold={1} luminanceSmoothing={0.9} intensity={1.5} />
+          <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.0006, 0.0006)} />
         </EffectComposer>
 
         <ScrollControls pages={3} damping={0.25}>

@@ -109,6 +109,7 @@
   line-height: 1.1;
   margin-bottom: 1.5rem;
   letter-spacing: -2px;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.9), 0 0 80px rgba(0, 0, 0, 1);
 }
 
 .hero-subtitle {
@@ -117,6 +118,7 @@
   line-height: 1.6;
   max-width: 600px;
   margin-bottom: 3rem;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9);
 }
 
 .cta-button {
