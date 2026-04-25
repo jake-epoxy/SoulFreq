@@ -337,7 +337,6 @@ export function useAudioEngine(options?: EngineOptions) {
     const ctx = audioCtxRef.current;
     if (!ctx || !masterGainRef.current) return;
 
-    // Ensure the audio context is active so the drop plays immediately
     if (ctx.state === 'suspended') {
       await ctx.resume();
       setIsPlaying(true);
@@ -345,7 +344,7 @@ export function useAudioEngine(options?: EngineOptions) {
 
     const now = ctx.currentTime;
 
-    // Fade out background presets completely and keep them off (The drop resets the sonic environment)
+    // Fade out background presets completely to create a clean sonic canvas
     Object.values(channelGainsRef.current).forEach(gainNode => {
         const currentVol = gainNode.gain.value;
         if (currentVol > 0.0001) {
@@ -355,107 +354,115 @@ export function useAudioEngine(options?: EngineOptions) {
         }
     });
 
-    // Master gain for the entire sweep effect
-    const sweepMasterGain = ctx.createGain();
-    sweepMasterGain.gain.value = 0.01;
-    // Fade in over 100ms to prevent clicking
-    sweepMasterGain.gain.exponentialRampToValueAtTime(1.0, now + 0.1);
-    // Fade out smoothly at the end
-    sweepMasterGain.gain.setValueAtTime(1.0, now + durationSeconds - 2);
-    sweepMasterGain.gain.linearRampToValueAtTime(0.01, now + durationSeconds);
+    // Master gain for the wash
+    const washMasterGain = ctx.createGain();
+    washMasterGain.gain.value = 0.01;
+    washMasterGain.gain.exponentialRampToValueAtTime(1.0, now + 2); // Slow swell in
+    washMasterGain.gain.setValueAtTime(1.0, now + durationSeconds - 5);
+    washMasterGain.gain.linearRampToValueAtTime(0.0001, now + durationSeconds);
     
-    sweepMasterGain.connect(masterGainRef.current);
+    washMasterGain.connect(masterGainRef.current);
 
-    // Massive Cavernous Delay Network
-    const delayL = ctx.createDelay();
-    delayL.delayTime.value = 0.4; // 400ms delay
-    const delayR = ctx.createDelay();
-    delayR.delayTime.value = 0.6; // 600ms delay
+    // The Submersion Filter (Low-pass sweeping down)
+    const submersionFilter = ctx.createBiquadFilter();
+    submersionFilter.type = 'lowpass';
+    submersionFilter.frequency.setValueAtTime(4000, now);
+    submersionFilter.frequency.exponentialRampToValueAtTime(100, now + durationSeconds); // Drops into a warm, muffled hum
+    submersionFilter.Q.value = 1.5; // Slight resonance for a physical "sweeping" feel
     
-    const feedbackL = ctx.createGain();
-    feedbackL.gain.value = 0.4; 
-    const feedbackR = ctx.createGain();
-    feedbackR.gain.value = 0.4;
+    // Stereo Expander
+    const stereoPanner = ctx.createStereoPanner();
+    stereoPanner.pan.setValueAtTime(0, now); // Start in center
+    // LFO to slowly rock back and forth while expanding
+    const panLFO = ctx.createOscillator();
+    panLFO.type = 'sine';
+    panLFO.frequency.value = 0.1; // Very slow pan
+    
+    const panDepth = ctx.createGain();
+    panDepth.gain.setValueAtTime(0, now);
+    panDepth.gain.linearRampToValueAtTime(0.8, now + (durationSeconds / 2)); // Pan gets wider as it drops
+    
+    panLFO.connect(panDepth);
+    panDepth.connect(stereoPanner.pan);
+    panLFO.start(now);
+    panLFO.stop(now + durationSeconds);
 
-    const panL = ctx.createStereoPanner();
-    panL.pan.value = -0.8;
-    const panR = ctx.createStereoPanner();
-    panR.pan.value = 0.8;
+    submersionFilter.connect(stereoPanner);
+    stereoPanner.connect(washMasterGain);
 
-    delayL.connect(feedbackL);
-    feedbackL.connect(delayL);
-    delayL.connect(panL);
+    // 1. Golden Ratio Harmonics (Perfect 5ths and Octaves)
+    // Root, Fifth (1.5x), Octave (2x), Major Third (1.25x) of startFreq (usually 432)
+    const harmonics = [1, 1.25, 1.5, 2];
     
-    delayR.connect(feedbackR);
-    feedbackR.connect(delayR);
-    delayR.connect(panR);
-    
-    panL.connect(sweepMasterGain);
-    panR.connect(sweepMasterGain);
-
-    const centerFreq = 1600; 
-    const bellWidth = 2.0; 
-    
-    // 4 Octaves for a focused, pure ringing effect
-    for (let i = 0; i <= 3; i++) {
-        const octaveMultiplier = Math.pow(2, i);
-        const f_start = startFreq * octaveMultiplier;
-        const f_end = endFreq * octaveMultiplier;
+    harmonics.forEach((multiplier, index) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(startFreq * multiplier, now);
         
-        // Pure ringing Sine
-        const osc1 = ctx.createOscillator();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(f_start, now);
-        osc1.frequency.exponentialRampToValueAtTime(f_end, now + durationSeconds);
-        
-        // Gentle Triangle for physical resonance, detuned slowly (2Hz) for majestic swirl
-        const osc2 = ctx.createOscillator();
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(f_start + 2, now);
-        osc2.frequency.exponentialRampToValueAtTime(f_end + 2, now + durationSeconds);
-
-        const gainNode = ctx.createGain();
-        
-        const curveLength = 100;
-        const volCurve = new Float32Array(curveLength);
-        for(let j=0; j<curveLength; j++) {
-            const t = j / (curveLength - 1);
-            const currentFreq = f_start * Math.pow(f_end / f_start, t);
-            const octavesFromCenter = Math.log2(currentFreq / centerFreq);
-            const amplitude = Math.exp(-(octavesFromCenter * octavesFromCenter) / (2 * bellWidth * bellWidth));
-            volCurve[j] = amplitude * 0.15; 
+        // Add a very slight detune to the higher harmonics for thick, glowing chorus
+        if (index > 0) {
+           const detuneOsc = ctx.createOscillator();
+           detuneOsc.type = 'sine';
+           detuneOsc.frequency.setValueAtTime((startFreq * multiplier) + (index * 1.5), now);
+           
+           const dGain = ctx.createGain();
+           dGain.gain.value = 0.15;
+           detuneOsc.connect(dGain);
+           dGain.connect(submersionFilter);
+           detuneOsc.start(now);
+           detuneOsc.stop(now + durationSeconds);
         }
+
+        const oscGain = ctx.createGain();
+        oscGain.gain.value = index === 0 ? 0.3 : 0.15; // Root is strongest
         
-        gainNode.gain.setValueCurveAtTime(volCurve, now, durationSeconds);
+        osc.connect(oscGain);
+        oscGain.connect(submersionFilter);
         
-        osc1.connect(gainNode);
-        osc2.connect(gainNode);
-        
-        gainNode.connect(sweepMasterGain); // Dry signal
-        gainNode.connect(delayL); // Wet L
-        gainNode.connect(delayR); // Wet R
-        
-        osc1.start(now);
-        osc2.start(now);
-        osc1.stop(now + durationSeconds);
-        osc2.stop(now + durationSeconds);
-        
-        // Cleanup memory
-        osc1.onended = () => {
-            osc1.disconnect();
-            osc2.disconnect();
-            gainNode.disconnect();
-            if (i === 3) {
-                delayL.disconnect();
-                delayR.disconnect();
-                feedbackL.disconnect();
-                feedbackR.disconnect();
-                panL.disconnect();
-                panR.disconnect();
-                sweepMasterGain.disconnect();
-            }
-        };
+        osc.start(now);
+        osc.stop(now + durationSeconds);
+    });
+
+    // 2. The ASMR Ocean Wave (Pink Noise Wash)
+    const bufferSize = ctx.sampleRate * 2; 
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let lastOut = 0;
+    for (let i = 0; i < bufferSize; i++) {
+        let whiteRaw = Math.random() * 2 - 1;
+        lastOut = (lastOut * 0.9) + (0.1 * whiteRaw);
+        data[i] = lastOut * 2.0; 
     }
+    
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = buffer;
+    noiseSource.loop = true;
+    
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.setValueAtTime(2000, now);
+    noiseFilter.frequency.exponentialRampToValueAtTime(200, now + durationSeconds);
+    noiseFilter.Q.value = 0.5;
+
+    const noiseGain = ctx.createGain();
+    // Simulate an ocean wave crashing and receding
+    noiseGain.gain.setValueAtTime(0, now);
+    noiseGain.gain.linearRampToValueAtTime(0.08, now + 3);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + durationSeconds);
+    
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(stereoPanner); // Panned with the chord
+    
+    noiseSource.start(now);
+    noiseSource.stop(now + durationSeconds);
+
+    // Cleanup
+    setTimeout(() => {
+        washMasterGain.disconnect();
+        submersionFilter.disconnect();
+        stereoPanner.disconnect();
+    }, (durationSeconds + 1) * 1000);
   }, [initEngine]);
 
   return { isPlaying, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };

@@ -425,20 +425,20 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
           </div>
         </div>
 
-        <div style={{ marginBottom: '2rem', marginTop: '1rem', padding: '1.5rem', background: 'rgba(255, 0, 85, 0.05)', border: '1px solid rgba(255, 0, 85, 0.2)', borderRadius: '12px' }}>
-            <h4 style={{ color: '#ff0055', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Zap size={18} />
-              The Parasympathetic Drop
+        <div style={{ marginBottom: '2rem', marginTop: '1rem', padding: '1.5rem', background: 'rgba(0, 240, 255, 0.05)', border: '1px solid rgba(0, 240, 255, 0.2)', borderRadius: '12px' }}>
+            <h4 style={{ color: '#00F0FF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Waves size={18} />
+              The Euphoric Wash
             </h4>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-              Trigger a massive parasympathetic sweep using descending Shepard Tones. This forces the nervous system to mimic the sensation of physical dropping, instantly breaking anxiety loops.
+              Trigger a deeply pleasurable, 30-second submersion effect. Mathematically perfect golden ratio chords pan outward while a warm acoustic filter wraps around your auditory cortex to melt anxiety.
             </p>
             <button 
               className="cta-button"
-              style={{ width: '100%', padding: '0.75rem', background: 'linear-gradient(90deg, #ff0055, #cc0044)', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
-              onClick={() => triggerSweep(800, 174, 30)}
+              style={{ width: '100%', padding: '0.75rem', background: 'linear-gradient(90deg, #00F0FF, #0088FF)', border: 'none', borderRadius: '8px', color: 'black', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 0 20px rgba(0, 240, 255, 0.3)' }}
+              onClick={() => triggerSweep(432, 100, 30)}
             >
-              Trigger Parasympathetic Drop (30s Sweep)
+              Trigger Euphoric Wash (30s)
             </button>
         </div>
 
