@@ -287,5 +287,61 @@ export function useAudioEngine() {
     return analyserRef.current;
   }, []);
 
-  return { isPlaying, togglePlay, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording };
+  const triggerSweep = useCallback((startFreq: number, endFreq: number, durationSeconds: number) => {
+    if (!audioCtxRef.current) initEngine();
+    const ctx = audioCtxRef.current;
+    if (!ctx || !masterGainRef.current) return;
+
+    // Create a dedicated gain node for the sweep, so it doesn't get muted by setVolume
+    const sweepMasterGain = ctx.createGain();
+    sweepMasterGain.gain.value = 1;
+    sweepMasterGain.connect(masterGainRef.current);
+
+    const now = ctx.currentTime;
+    
+    // Shepard Tone implementation (3 oscillators spaced by octaves)
+    for (let i = 0; i < 3; i++) {
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        // Offset each oscillator by an octave (x1, x2, x4)
+        const octaveMultiplier = Math.pow(2, i);
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(startFreq * octaveMultiplier, now);
+        osc.frequency.exponentialRampToValueAtTime(endFreq * octaveMultiplier, now + durationSeconds);
+        
+        // Shepard Tone envelope fading:
+        // Highest octave fades OUT
+        // Middle octave stays relatively steady
+        // Lowest octave fades IN
+        if (i === 2) {
+            // Highest octave (fades out as it sweeps down)
+            gainNode.gain.setValueAtTime(0.5, now);
+            gainNode.gain.linearRampToValueAtTime(0.01, now + durationSeconds);
+        } else if (i === 1) {
+            // Middle octave (stays constant)
+            gainNode.gain.setValueAtTime(0.5, now);
+            gainNode.gain.linearRampToValueAtTime(0.5, now + durationSeconds);
+        } else {
+            // Lowest octave (fades in as it sweeps down)
+            gainNode.gain.setValueAtTime(0.01, now);
+            gainNode.gain.linearRampToValueAtTime(0.5, now + durationSeconds);
+        }
+
+        osc.connect(gainNode);
+        gainNode.connect(sweepMasterGain);
+        
+        osc.start(now);
+        osc.stop(now + durationSeconds);
+        
+        // Cleanup
+        osc.onended = () => {
+            gainNode.disconnect();
+            if (i === 0) sweepMasterGain.disconnect(); 
+        };
+    }
+  }, [initEngine]);
+
+  return { isPlaying, togglePlay, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };
 }

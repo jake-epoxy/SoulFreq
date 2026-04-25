@@ -408,6 +408,23 @@ export default function Studio({ initialPreset }: StudioProps) {
           </div>
         </div>
 
+        <div style={{ marginBottom: '2rem', marginTop: '1rem', padding: '1.5rem', background: 'rgba(255, 0, 85, 0.05)', border: '1px solid rgba(255, 0, 85, 0.2)', borderRadius: '12px' }}>
+            <h4 style={{ color: '#ff0055', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Zap size={18} />
+              The Golden Ratio Drop
+            </h4>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+              Trigger a massive parasympathetic sweep using descending Shepard Tones. This forces the nervous system to mimic the sensation of physical dropping, instantly breaking anxiety loops.
+            </p>
+            <button 
+              className="cta-button"
+              style={{ width: '100%', padding: '0.75rem', background: 'linear-gradient(90deg, #ff0055, #cc0044)', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
+              onClick={() => useAudioEngine().triggerSweep(800, 174, 15)}
+            >
+              Trigger Golden Sweep (15s Drop)
+            </button>
+        </div>
+
         <div className="custom-controls-grid">
           {/* Channel Volume */}
           <div className="custom-control">
