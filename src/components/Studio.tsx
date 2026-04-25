@@ -289,7 +289,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
       {!isPremium && (
         <div 
           className="freemium-timer" 
-          style={{ position: 'fixed', top: '2rem', right: '2rem', background: 'rgba(15, 15, 20, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,50,50,0.3)', padding: '0.6rem 1.2rem', borderRadius: '50px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 700, color: '#ff6b6b', zIndex: 50, boxShadow: '0 10px 30px rgba(255,50,50,0.1)' }}
+          style={{ position: 'fixed', bottom: '2rem', right: '2rem', background: 'rgba(15, 15, 20, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,50,50,0.3)', padding: '0.6rem 1.2rem', borderRadius: '50px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 700, color: '#ff6b6b', zIndex: 50, boxShadow: '0 10px 30px rgba(255,50,50,0.1)' }}
         >
           <Zap size={16} />
           <span>{Math.max(0, 120 - elapsedTime)}s Trial Left</span>
