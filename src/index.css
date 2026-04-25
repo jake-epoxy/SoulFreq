@@ -102,6 +102,28 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+.main-content {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  padding-top: 100px;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 140px; /* Accounts for stacked mobile header */
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+.main-content.hero-stage {
+  padding: 0;
+}
+
 /* Base button reset for custom framer-motion styling */
 button {
   border: none;

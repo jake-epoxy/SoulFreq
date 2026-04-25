@@ -134,7 +134,7 @@ function App() {
         </nav>
       </header>
 
-      <main style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <main className={`main-content ${stage === 'hero' ? 'hero-stage' : ''}`}>
         <AnimatePresence mode="wait">
           {stage === 'hero' && (
             <motion.div 
