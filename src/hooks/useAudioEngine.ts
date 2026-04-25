@@ -292,53 +292,107 @@ export function useAudioEngine() {
     const ctx = audioCtxRef.current;
     if (!ctx || !masterGainRef.current) return;
 
-    // Create a dedicated gain node for the sweep, so it doesn't get muted by setVolume
+    // Master gain for the entire sweep effect
     const sweepMasterGain = ctx.createGain();
-    sweepMasterGain.gain.value = 1;
-    sweepMasterGain.connect(masterGainRef.current);
+    sweepMasterGain.gain.value = 0.01;
+    // Fade in over 100ms to prevent clicking
+    sweepMasterGain.gain.exponentialRampToValueAtTime(1.0, ctx.currentTime + 0.1);
+    // Fade out smoothly at the end
+    sweepMasterGain.gain.setValueAtTime(1.0, ctx.currentTime + durationSeconds - 2);
+    sweepMasterGain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + durationSeconds);
+    
+    // Add a Theta (4Hz) Tremolo to the whole drop for visceral "throbbing"
+    const tremoloGain = ctx.createGain();
+    tremoloGain.gain.value = 0.8; 
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 4; // 4Hz
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 0.2; // 20% volume modulation
+    lfo.connect(lfoGain);
+    lfoGain.connect(tremoloGain.gain);
+    lfo.start(ctx.currentTime);
+    lfo.stop(ctx.currentTime + durationSeconds);
+
+    sweepMasterGain.connect(tremoloGain);
+    tremoloGain.connect(masterGainRef.current);
 
     const now = ctx.currentTime;
+    const centerFreq = 400; // Peak volume frequency for the Shepard envelope
+    const bellWidth = 2.0; // Width of the frequency bell curve
     
-    // Shepard Tone implementation (3 oscillators spaced by octaves)
-    for (let i = 0; i < 3; i++) {
+    // 7 Octaves spanning deep sub-bass to high treble
+    for (let i = -3; i <= 3; i++) {
+        const octaveMultiplier = Math.pow(2, i);
+        const f_start = startFreq * octaveMultiplier;
+        const f_end = endFreq * octaveMultiplier;
+        
+        // 1. Primary Oscillator (Sawtooth for richness and "grit")
         const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(f_start, now);
+        osc.frequency.exponentialRampToValueAtTime(f_end, now + durationSeconds);
+        
+        // 2. Sub-oscillator (Sine) exactly one octave below for pure bass weight
+        const subOsc = ctx.createOscillator();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(f_start / 2, now);
+        subOsc.frequency.exponentialRampToValueAtTime(f_end / 2, now + durationSeconds);
+
+        // 3. Lowpass Filter to warm up the sawtooth and make it sound massive
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.Q.value = 1.0; 
+        filter.frequency.setValueAtTime(f_start * 1.5, now);
+        filter.frequency.exponentialRampToValueAtTime(f_end * 1.5, now + durationSeconds);
+        
+        // 4. Gain Node for the Gaussian Envelope (The Shepard Illusion)
         const gainNode = ctx.createGain();
         
-        // Offset each oscillator by an octave (x1, x2, x4)
-        const octaveMultiplier = Math.pow(2, i);
-        
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(startFreq * octaveMultiplier, now);
-        osc.frequency.exponentialRampToValueAtTime(endFreq * octaveMultiplier, now + durationSeconds);
-        
-        // Shepard Tone envelope fading:
-        // Highest octave fades OUT
-        // Middle octave stays relatively steady
-        // Lowest octave fades IN
-        if (i === 2) {
-            // Highest octave (fades out as it sweeps down)
-            gainNode.gain.setValueAtTime(0.5, now);
-            gainNode.gain.linearRampToValueAtTime(0.01, now + durationSeconds);
-        } else if (i === 1) {
-            // Middle octave (stays constant)
-            gainNode.gain.setValueAtTime(0.5, now);
-            gainNode.gain.linearRampToValueAtTime(0.5, now + durationSeconds);
-        } else {
-            // Lowest octave (fades in as it sweeps down)
-            gainNode.gain.setValueAtTime(0.01, now);
-            gainNode.gain.linearRampToValueAtTime(0.5, now + durationSeconds);
+        // Calculate the volume curve based on frequency passing through the center
+        const curveLength = 100;
+        const volCurve = new Float32Array(curveLength);
+        for(let j=0; j<curveLength; j++) {
+            const t = j / (curveLength - 1);
+            const currentFreq = f_start * Math.pow(f_end / f_start, t);
+            const octavesFromCenter = Math.log2(currentFreq / centerFreq);
+            // Gaussian bell curve
+            const amplitude = Math.exp(-(octavesFromCenter * octavesFromCenter) / (2 * bellWidth * bellWidth));
+            volCurve[j] = amplitude * 0.12; // Normalize to prevent clipping across 7 octaves
         }
+        
+        gainNode.gain.setValueCurveAtTime(volCurve, now, durationSeconds);
+        
+        // 5. Spatial Panning to widen the higher octaves around the listener's head
+        const panner = ctx.createStereoPanner();
+        const panValue = i === 0 ? 0 : (i % 2 === 0 ? 0.6 : -0.6) * (Math.abs(i)/3);
+        panner.pan.value = panValue;
 
-        osc.connect(gainNode);
-        gainNode.connect(sweepMasterGain);
+        // Connections
+        osc.connect(filter);
+        subOsc.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(panner);
+        panner.connect(sweepMasterGain);
         
         osc.start(now);
+        subOsc.start(now);
         osc.stop(now + durationSeconds);
+        subOsc.stop(now + durationSeconds);
         
-        // Cleanup
+        // Cleanup memory
         osc.onended = () => {
+            osc.disconnect();
+            subOsc.disconnect();
+            filter.disconnect();
             gainNode.disconnect();
-            if (i === 0) sweepMasterGain.disconnect(); 
+            panner.disconnect();
+            if (i === 3) {
+                sweepMasterGain.disconnect();
+                tremoloGain.disconnect();
+                lfoGain.disconnect();
+                lfo.disconnect();
+            }
         };
     }
   }, [initEngine]);
