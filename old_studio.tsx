@@ -32,8 +32,6 @@ const INITIAL_AMBIENTS: Config[] = [
   { name: 'Vinyl', effect: 'ASMR Crackle Texture', value: 0 },
 ];
 
-
-
 const PRESETS = [
   {
     id: 'grounding',
@@ -104,18 +102,15 @@ interface StudioProps {
 
 export default function Studio({ initialPreset, isPremium }: StudioProps) {
   const [showPaywall, setShowPaywall] = useState(false);
-  const { isPlaying, isWashing, activeWashType, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine({
+  const { isPlaying, isWashing, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine({
     isPremium,
     onCutoff: () => setShowPaywall(true)
   });
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const hudRef = useRef<HTMLDivElement>(null);
-  const hudHzRef = useRef<HTMLSpanElement>(null);
-  const hudProgRef = useRef<HTMLDivElement>(null);
   
   const [frequencies, setFrequencies] = useState<Config[]>(INITIAL_FREQUENCIES);
   const [ambients, setAmbients] = useState<Config[]>(INITIAL_AMBIENTS);
-    const [customVol, setCustomVol] = useState(0);
+  const [customVol, setCustomVol] = useState(0);
   const [customBase, setCustomBase] = useState(432); 
   const [customOffset, setCustomOffset] = useState(0); 
   const [customWave, setCustomWave] = useState<OscillatorType>('sine');
@@ -125,7 +120,17 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
 
   const hasInitializedAudioRef = useRef(false);
 
-
+  useEffect(() => {
+    if (!hasInitializedAudioRef.current) {
+        let presetToLoad = PRESETS[0]; // Auto load Deep Sleep default
+        if (initialPreset) {
+            const found = PRESETS.find(p => p.id === initialPreset);
+            if (found) presetToLoad = found;
+        }
+        applyPreset(presetToLoad);
+        hasInitializedAudioRef.current = true;
+    }
+  }, [initialPreset]);
 
   // Visualizer Loop
   useEffect(() => {
@@ -199,27 +204,13 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
       ctx.shadowBlur = 0;
       ctx.stroke();
 
-      
-      const washData = getActiveWashData();
-      if (hudRef.current && hudHzRef.current && hudProgRef.current) {
-         if (washData) {
-            hudRef.current.style.opacity = '1';
-            hudRef.current.style.transform = 'translateY(0)';
-            hudHzRef.current.innerText = washData.displayHz;
-            hudProgRef.current.style.width = `${(washData.elapsed / washData.duration) * 100}%`;
-         } else {
-            hudRef.current.style.opacity = '0';
-            hudRef.current.style.transform = 'translateY(10px)';
-         }
-      }
-      
       animationFrameId = requestAnimationFrame(render);
     };
      
     render();
      
     return () => cancelAnimationFrame(animationFrameId);
-  }, [getAnalyser, getActiveWashData]);
+  }, [getAnalyser]);
 
   const applyPreset = (preset: typeof PRESETS[0]) => {
      setActivePreset(preset.id);
@@ -230,7 +221,6 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
      const newAmbs = ambients.map(a => ({ ...a, value: preset.settings.ambients[a.name as keyof typeof preset.settings.ambients] }));
      setAmbients(newAmbs);
 
-     
      setCustomVol(preset.settings.custom.vol);
      setCustomBase(preset.settings.custom.base);
      setCustomOffset(preset.settings.custom.offset);
@@ -245,19 +235,6 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
      updateCustomNode(preset.settings.custom.base, preset.settings.custom.offset, preset.settings.custom.wave);
      updateIsochronic(preset.settings.custom.isoRate, preset.settings.custom.isoDepth);
   };
-
-  useEffect(() => {
-    if (!hasInitializedAudioRef.current) {
-        let presetToLoad = PRESETS[0]; // Auto load Deep Sleep default
-        if (initialPreset) {
-            const found = PRESETS.find(p => p.id === initialPreset);
-            if (found) presetToLoad = found;
-        }
-        applyPreset(presetToLoad);
-        hasInitializedAudioRef.current = true;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPreset]);
 
   const handleFreqChange = (idx: number, newValue: number) => {
     setActivePreset(null); 
@@ -275,7 +252,6 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
     setVolume(updated[idx].name, newValue);
   };
 
-  
   const handleCustomParamChange = (base: number, offset: number, wave: OscillatorType) => {
     setActivePreset(null);
     setCustomBase(base);
@@ -502,55 +478,36 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <button 
                 className="cta-button"
-                style={{ padding: '0.75rem', background: isWashing && activeWashType === 'euphoric' ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: isWashing && activeWashType === 'euphoric' ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: isWashing && activeWashType === 'euphoric' ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: isWashing && activeWashType !== 'euphoric' ? 0.3 : 1 }}
-                onClick={() => triggerSweep(customBase, 30, 'euphoric')}
+                style={{ padding: '0.75rem', background: isWashing ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: isWashing ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                onClick={() => triggerSweep(432, 30, 'euphoric')}
                 disabled={isWashing}
               >
                 Euphoric Wash
               </button>
               <button 
                 className="cta-button"
-                style={{ padding: '0.75rem', background: isWashing && activeWashType === 'flashbang' ? 'rgba(255, 0, 128, 0.1)' : 'linear-gradient(90deg, #FF0080, #7928CA)', border: isWashing && activeWashType === 'flashbang' ? '1px solid rgba(255, 0, 128, 0.3)' : 'none', borderRadius: '8px', color: isWashing && activeWashType === 'flashbang' ? '#FF0080' : 'white', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: isWashing && activeWashType !== 'flashbang' ? 0.3 : 1 }}
-                onClick={() => triggerSweep(customBase, 30, 'flashbang')}
+                style={{ padding: '0.75rem', background: isWashing ? 'rgba(255, 0, 128, 0.1)' : 'linear-gradient(90deg, #FF0080, #7928CA)', border: isWashing ? '1px solid rgba(255, 0, 128, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#FF0080' : 'white', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                onClick={() => triggerSweep(432, 30, 'flashbang')}
                 disabled={isWashing}
               >
                 Somatic Flashbang
               </button>
               <button 
                 className="cta-button"
-                style={{ padding: '0.75rem', background: isWashing && activeWashType === 'liquid' ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(90deg, #00FF88, #008855)', border: isWashing && activeWashType === 'liquid' ? '1px solid rgba(0, 255, 136, 0.3)' : 'none', borderRadius: '8px', color: isWashing && activeWashType === 'liquid' ? '#00FF88' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: isWashing && activeWashType !== 'liquid' ? 0.3 : 1 }}
-                onClick={() => triggerSweep(customBase, 30, 'liquid')}
+                style={{ padding: '0.75rem', background: isWashing ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(90deg, #00FF88, #008855)', border: isWashing ? '1px solid rgba(0, 255, 136, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#00FF88' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                onClick={() => triggerSweep(432, 30, 'liquid')}
                 disabled={isWashing}
               >
                 Liquid Fold
               </button>
               <button 
                 className="cta-button"
-                style={{ padding: '0.75rem', background: isWashing && activeWashType === 'ascender' ? 'rgba(255, 215, 0, 0.1)' : 'linear-gradient(90deg, #FFD700, #FF8C00)', border: isWashing && activeWashType === 'ascender' ? '1px solid rgba(255, 215, 0, 0.3)' : 'none', borderRadius: '8px', color: isWashing && activeWashType === 'ascender' ? '#FFD700' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: isWashing && activeWashType !== 'ascender' ? 0.3 : 1 }}
-                onClick={() => triggerSweep(customBase, 30, 'ascender')}
+                style={{ padding: '0.75rem', background: isWashing ? 'rgba(255, 215, 0, 0.1)' : 'linear-gradient(90deg, #FFD700, #FF8C00)', border: isWashing ? '1px solid rgba(255, 215, 0, 0.3)' : 'none', borderRadius: '8px', color: isWashing ? '#FFD700' : 'black', fontWeight: 'bold', cursor: isWashing ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                onClick={() => triggerSweep(432, 30, 'ascender')}
                 disabled={isWashing}
               >
                 Infinite Ascender
               </button>
-            </div>
-            
-            {/* Real-time Frequency HUD */}
-            <div 
-              ref={hudRef}
-              style={{ 
-                 marginTop: '1.5rem', padding: '1rem', background: 'rgba(0,0,0,0.5)', 
-                 border: '1px solid rgba(0, 240, 255, 0.2)', borderRadius: '8px',
-                 display: 'flex', flexDirection: 'column', gap: '0.5rem',
-                 opacity: 0, transform: 'translateY(10px)', transition: 'all 0.3s ease'
-              }}
-            >
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Live Synthesis</span>
-                 <span ref={hudHzRef} style={{ color: '#00F0FF', fontWeight: 'bold', fontFamily: 'monospace', fontSize: '1.1rem' }}>-- Hz</span>
-               </div>
-               <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-                 <div ref={hudProgRef} style={{ width: '0%', height: '100%', background: 'linear-gradient(90deg, #00F0FF, #FF0080)', transition: 'width 0.1s linear' }} />
-               </div>
             </div>
         </div>
 
@@ -692,7 +649,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         )}
       </AnimatePresence>
       <OnboardingModal 
-        onInitiate={() => triggerSweep(customBase, 30, 'flashbang')} 
+        onInitiate={() => triggerSweep(432, 30)} 
         onSkip={() => {}} 
       />
     </section>
