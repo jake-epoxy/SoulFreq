@@ -600,6 +600,8 @@ export function useAudioEngine(options?: EngineOptions) {
              displayHz = `[852Hz] POLY-${poly}`;
          } else if (type === 'bereginya') {
              displayHz = `[432+963Hz] MATRIX-ACTV`;
+         } else if (type === 'astral') {
+             displayHz = `[${startFreq || 528}Hz] VOID-SWIRL`;
          } else if (type === 'ascender') {
              const baseFreq = startFreq / 2;
              const cycle = (elapsed % 30) / 30;
@@ -613,7 +615,7 @@ export function useAudioEngine(options?: EngineOptions) {
      return currentWashes;
   }, []);
 
-  const toggleWash = useCallback(async (startFreq: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' | 'glitch' | 'cyber' | 'bereginya' = 'euphoric') => {
+  const toggleWash = useCallback(async (startFreq: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' | 'glitch' | 'cyber' | 'bereginya' | 'astral' = 'euphoric') => {
     if (!options?.isPremium && playbackTimeRef.current >= CUTOFF_SECONDS) {
       if (options?.onCutoff) options.onCutoff();
       return;
@@ -1103,6 +1105,61 @@ export function useAudioEngine(options?: EngineOptions) {
             gateLFO.start(now);
             activeNodes.push(osc, gain, gateLFO, gateDepth);
         });
+
+    } else if (type === 'astral') {
+        const baseOsc = ctx.createOscillator();
+        baseOsc.type = 'triangle';
+        baseOsc.frequency.value = startFreq || 528;
+
+        const fmOsc = ctx.createOscillator();
+        fmOsc.type = 'sine';
+        fmOsc.frequency.value = 5; // Rapid wobble
+        const fmGain = ctx.createGain();
+        fmGain.gain.value = 50; // Wobble depth
+        fmOsc.connect(fmGain);
+        fmGain.connect(baseOsc.frequency);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.Q.value = 2.0;
+        
+        const filterLFO = ctx.createOscillator();
+        filterLFO.type = 'sine';
+        filterLFO.frequency.value = 1 / 20; // 20 second sweep
+        const filterGain = ctx.createGain();
+        filterGain.gain.value = 2000;
+        filterLFO.connect(filterGain);
+        filterGain.connect(filter.frequency);
+        filter.frequency.value = 2500;
+
+        const panner = ctx.createStereoPanner();
+        const panLFO = ctx.createOscillator();
+        panLFO.type = 'sine';
+        panLFO.frequency.value = 0.2; // Spatial swirl
+        panLFO.connect(panner.pan);
+
+        const delay = ctx.createDelay();
+        delay.delayTime.value = 0.4;
+        const feedback = ctx.createGain();
+        feedback.gain.value = 0.6; // Heavy feedback
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(panner);
+
+        const outGain = ctx.createGain();
+        outGain.gain.value = 0.6;
+
+        baseOsc.connect(filter);
+        filter.connect(outGain);
+        outGain.connect(panner);
+        outGain.connect(delay);
+        panner.connect(washMasterGain);
+
+        baseOsc.start(now);
+        fmOsc.start(now);
+        filterLFO.start(now);
+        panLFO.start(now);
+        activeNodes.push(baseOsc, fmOsc, fmGain, filter, filterLFO, filterGain, panner, panLFO, delay, feedback, outGain);
 
     } else if (type === 'ascender') {
         const numOscs = 6;
