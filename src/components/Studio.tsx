@@ -122,8 +122,8 @@ const WashHUDItem = ({ type, getActiveWashData }: { type: string, getActiveWashD
         return () => cancelAnimationFrame(animationFrameId);
     }, [type, getActiveWashData]);
 
-    const title = type === 'euphoric' ? 'Euphoric Wash' : type === 'flashbang' ? 'Somatic Flashbang' : type === 'liquid' ? 'Liquid Fold' : type === 'glitch' ? 'Neuro-Glitch' : type === 'cyber' ? 'Cyber Twinkle' : 'Infinite Ascender';
-    const accent = type === 'euphoric' ? '#00F0FF' : type === 'flashbang' ? '#FF0080' : type === 'liquid' ? '#00FF88' : type === 'glitch' ? '#B500FF' : type === 'cyber' ? '#00FFFF' : '#FFD700';
+    const title = type === 'euphoric' ? 'Euphoric Wash' : type === 'flashbang' ? 'Somatic Flashbang' : type === 'liquid' ? 'Liquid Fold' : type === 'glitch' ? 'Neuro-Glitch' : type === 'cyber' ? 'Cyber Twinkle' : type === 'bereginya' ? 'Bereginya Wash' : 'Infinite Ascender';
+    const accent = type === 'euphoric' ? '#00F0FF' : type === 'flashbang' ? '#FF0080' : type === 'liquid' ? '#00FF88' : type === 'glitch' ? '#B500FF' : type === 'cyber' ? '#00FFFF' : type === 'bereginya' ? '#00E5FF' : '#FFD700';
 
     return (
         <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(0,10,15,0.8)', border: `1px solid ${accent}40`, borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '0.8rem', opacity: isVisible ? 1 : 0, transform: isVisible ? 'translateY(0)' : 'translateY(10px)', transition: 'all 0.3s ease', boxShadow: `0 0 20px ${accent}20, inset 0 0 10px ${accent}10` }}>
@@ -558,6 +558,13 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
                 onClick={() => toggleWash(customBase, 'cyber')}
               >
                 {activeWashTypes.includes('cyber') ? '■ STOP CYBER TWINKLE' : 'Cyber Twinkle'}
+              </button>
+              <button 
+                className="cta-button"
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('bereginya') ? 'rgba(0, 229, 255, 0.1)' : 'linear-gradient(90deg, #00E5FF, #0055FF)', border: activeWashTypes.includes('bereginya') ? '1px solid rgba(0, 229, 255, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('bereginya') ? '#00E5FF' : 'black', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('bereginya') ? '0 0 20px rgba(0,229,255,0.4), inset 0 0 10px rgba(0,229,255,0.2)' : 'none' }}
+                onClick={() => toggleWash(customBase, 'bereginya')}
+              >
+                {activeWashTypes.includes('bereginya') ? '■ STOP BEREGINYA' : 'Bereginya Wash'}
               </button>
               <button 
                 className="cta-button"

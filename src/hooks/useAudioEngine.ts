@@ -598,6 +598,8 @@ export function useAudioEngine(options?: EngineOptions) {
          } else if (type === 'cyber') {
              const poly = Math.random() > 0.5 ? 'SYNC' : 'OFFSET';
              displayHz = `[852Hz] POLY-${poly}`;
+         } else if (type === 'bereginya') {
+             displayHz = `[432+963Hz] MATRIX-ACTV`;
          } else if (type === 'ascender') {
              const baseFreq = startFreq / 2;
              const cycle = (elapsed % 30) / 30;
@@ -611,7 +613,7 @@ export function useAudioEngine(options?: EngineOptions) {
      return currentWashes;
   }, []);
 
-  const toggleWash = useCallback(async (startFreq: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' | 'glitch' | 'cyber' = 'euphoric') => {
+  const toggleWash = useCallback(async (startFreq: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' | 'glitch' | 'cyber' | 'bereginya' = 'euphoric') => {
     if (!options?.isPremium && playbackTimeRef.current >= CUTOFF_SECONDS) {
       if (options?.onCutoff) options.onCutoff();
       return;
@@ -1014,6 +1016,66 @@ export function useAudioEngine(options?: EngineOptions) {
             tOsc.start(now);
             tLFO.start(now);
             activeNodes.push(tOsc, tLFO, lfoScale, tGain);
+        });
+
+    } else if (type === 'bereginya') {
+        // Dual-Core Frequency Bridge: 432 Hz and 963 Hz
+        const baseFreqs = [432, 963];
+        const harmonics = [1000, 2000, 5000]; // The 5-4-9 Matrix stack (simplified approximations)
+        
+        // Active Neuro Offset (Stereo panning pressure)
+        const panner = ctx.createStereoPanner();
+        const panLFO = ctx.createOscillator();
+        panLFO.type = 'sine';
+        panLFO.frequency.value = 0.1; // Slow, moving pressure
+        panLFO.connect(panner.pan);
+        panLFO.start(now);
+        activeNodes.push(panner, panLFO);
+
+        // The Snap / Vacuum Effect
+        const snapFilter = ctx.createBiquadFilter();
+        snapFilter.type = 'highpass';
+        snapFilter.frequency.value = 20; // Default low
+        
+        // Schedule the snaps every 14 seconds
+        for (let i = 0; i < 20; i++) {
+            const snapTime = now + (i * 14) + 14;
+            snapFilter.frequency.setValueAtTime(20, snapTime - 0.1);
+            snapFilter.frequency.exponentialRampToValueAtTime(1000, snapTime);
+            snapFilter.frequency.exponentialRampToValueAtTime(20, snapTime + 0.5);
+        }
+
+        snapFilter.connect(panner);
+        panner.connect(washMasterGain);
+        activeNodes.push(snapFilter);
+
+        // Sub-Bass Grounding
+        const subOsc = ctx.createOscillator();
+        subOsc.type = 'sine';
+        subOsc.frequency.value = 60;
+        const subGain = ctx.createGain();
+        subGain.gain.value = 0.4;
+        subOsc.connect(subGain);
+        subGain.connect(panner); // Bypass snap filter for constant grounding
+        subOsc.start(now);
+        activeNodes.push(subOsc, subGain);
+
+        // Build the Harmonic Stack
+        const allFreqs = [...baseFreqs, ...harmonics];
+        allFreqs.forEach((freq, index) => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            
+            const gain = ctx.createGain();
+            // Lower frequencies have more gain, higher are just harmonics
+            gain.gain.value = index < 2 ? 0.3 : 0.1;
+            
+            osc.connect(gain);
+            gain.connect(snapFilter);
+            
+            osc.start(now);
+            activeNodes.push(osc, gain);
         });
 
     } else if (type === 'ascender') {
