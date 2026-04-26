@@ -837,6 +837,55 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         onInitiate={() => toggleWash(customBase, 'flashbang')} 
         onSkip={() => {}} 
       />
+
+      {/* Sticky Floating Recorder Bar */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 90,
+        background: 'rgba(5, 5, 15, 0.85)',
+        backdropFilter: 'blur(20px)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        padding: '0.6rem 1.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1.5rem',
+      }}>
+        {/* Play/Pause */}
+        <button 
+          onClick={togglePlay}
+          style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
+        >
+          {isPlaying ? <Pause fill="currentColor" size={16} /> : <Play fill="currentColor" size={16} style={{ marginLeft: '2px' }} />}
+        </button>
+
+        {/* Timer */}
+        <span style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', minWidth: '50px' }}>
+          {Math.floor(elapsedTime / 60).toString().padStart(2, '0')}:{(elapsedTime % 60).toString().padStart(2, '0')}
+        </span>
+
+        {/* Active wash indicator */}
+        {activeWashTypes.length > 0 && (
+          <span style={{ fontSize: '0.75rem', color: 'var(--brand-cyan)', letterSpacing: '1px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--brand-cyan)', boxShadow: '0 0 8px var(--brand-cyan)', animation: 'pulse-dot 1.5s infinite ease-in-out' }} />
+            {activeWashTypes.length} Wash{activeWashTypes.length > 1 ? 'es' : ''} Active
+          </span>
+        )}
+
+        {/* Record Button */}
+        <button
+          className={`record-action-button ${isRecording ? 'recording' : ''}`}
+          onClick={!isPremium ? () => setShowPaywall(true) : (isRecording ? stopRecording : startRecording)}
+          title={!isPremium ? "Premium Feature" : (isRecording ? "Stop & Download" : "Record Session")}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', borderRadius: '50px', border: isRecording ? '1px solid rgba(255, 42, 42, 0.5)' : '1px solid rgba(255,255,255,0.15)', background: isRecording ? 'rgba(255, 42, 42, 0.1)' : 'rgba(255,255,255,0.05)', color: isRecording ? '#ff2a2a' : 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+        >
+          {isRecording ? <Square fill="currentColor" size={10} style={{ color: '#ff2a2a' }} /> : <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff2a2a' }} />}
+          {isRecording ? 'STOP' : 'REC'}
+        </button>
+      </div>
     </section>
   );
 }
