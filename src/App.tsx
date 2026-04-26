@@ -6,6 +6,7 @@ import Assessment from './components/Assessment';
 import Protocol from './components/Protocol';
 import Paywall from './components/Paywall';
 import AuthWall from './components/AuthWall';
+import ReloadPrompt from './components/ReloadPrompt';
 import { supabase } from './lib/supabase';
 
 export type AppStage = 'hero' | 'assessment' | 'auth' | 'studio' | 'protocol';
@@ -232,6 +233,8 @@ function App() {
           <p>&copy; 2026 Kinesus. High-End Frequency Engine.</p>
         </footer>
       )}
+
+      <ReloadPrompt />
     </>
   );
 }

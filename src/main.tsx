@@ -3,10 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Analytics } from '@vercel/analytics/react';
 import App from './App.tsx';
 import './index.css';
-import { registerSW } from 'virtual:pwa-register';
-
-// Register the service worker for PWA support
-registerSW({ immediate: true });
+// Service worker registration is now handled by ReloadPrompt.tsx
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
