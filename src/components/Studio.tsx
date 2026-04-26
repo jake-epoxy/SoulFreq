@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Sliders, Waves, ActivitySquare, Speaker, Zap, MoonStar, Anchor, Square, X } from 'lucide-react';
+import { Play, Pause, Sliders, Waves, ActivitySquare, Speaker, Zap, MoonStar, Anchor, Square, X, Share2 } from 'lucide-react';
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import type { FrequencyChannel } from '../hooks/useAudioEngine';
 import Paywall from './Paywall';
@@ -273,10 +273,32 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
   useEffect(() => {
     if (!hasInitializedAudioRef.current) {
         let presetToLoad = PRESETS[0]; // Auto load Deep Sleep default
-        if (initialPreset) {
+        
+        // Intercept Viral Mix Link
+        const urlParams = new URLSearchParams(window.location.search);
+        const mixParam = urlParams.get('mix');
+        
+        if (mixParam) {
+            try {
+                const parsed = JSON.parse(atob(mixParam));
+                presetToLoad = {
+                    id: 'shared-mix',
+                    title: 'Received Digital Drug',
+                    desc: 'A custom mix sent from a friend.',
+                    icon: Share2,
+                    color: 'preset-purple',
+                    settings: parsed
+                };
+                // Clean the URL silently
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (e) {
+                console.error("Failed to parse shared mix", e);
+            }
+        } else if (initialPreset) {
             const found = PRESETS.find(p => p.id === initialPreset);
             if (found) presetToLoad = found;
         }
+        
         applyPreset(presetToLoad);
         hasInitializedAudioRef.current = true;
     }
@@ -350,6 +372,19 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
     });
   };
 
+  const shareMix = () => {
+    const memory = {
+      freqs: Object.fromEntries(frequencies.map(f => [f.name, f.value])),
+      ambients: Object.fromEntries(ambients.map(a => [a.name, a.value])),
+      custom: { vol: customVol, base: customBase, offset: customOffset, wave: customWave, isoRate, isoDepth }
+    };
+    const b64 = btoa(JSON.stringify(memory));
+    const url = `${window.location.origin}${window.location.pathname}?mix=${b64}`;
+    navigator.clipboard.writeText(url)
+      .then(() => alert('Digital Drug link copied to clipboard! Text it to a friend.'))
+      .catch(() => alert('Failed to copy link.'));
+  };
+
   return (
     <section className="studio-container">
       <div className="studio-header">
@@ -403,7 +438,13 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         })}
       </motion.div>
 
-      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+        <button 
+          onClick={shareMix}
+          style={{ padding: '0.75rem 1.5rem', background: 'rgba(162, 0, 255, 0.1)', border: '1px solid rgba(162, 0, 255, 0.3)', borderRadius: '8px', color: '#a200ff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <Share2 size={16} /> Share Mix
+        </button>
         <button 
           onClick={saveToMemory}
           style={{ padding: '0.75rem 1.5rem', background: 'rgba(0, 240, 255, 0.1)', border: '1px solid rgba(0, 240, 255, 0.3)', borderRadius: '8px', color: '#00F0FF', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
