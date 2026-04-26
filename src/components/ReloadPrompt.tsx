@@ -70,7 +70,7 @@ export default function ReloadPrompt() {
                 <p style={{ color: 'rgba(255,255,255,0.6)', margin: 0, fontSize: '0.85rem', marginTop: '0.25rem' }}>
                   {needRefresh 
                     ? 'A new version of Kinesus has been downloaded.' 
-                    : 'The app has been saved to your device.'}
+                    : 'The audio engine is cached for offline sessions.'}
                 </p>
               </div>
             </div>
