@@ -523,11 +523,34 @@ export function useAudioEngine(options?: EngineOptions) {
     if (!audioCtxRef.current) initEngine();
     const ctx = audioCtxRef.current;
     if (!ctx) return;
+    
     if (isPlaying) {
-      await ctx.suspend();
+      // Mute all studio channels via gain (not ctx.suspend, which would kill washes)
+      const now = ctx.currentTime;
+      Object.keys(channelGainsRef.current).forEach(key => {
+        const gainNode = channelGainsRef.current[key];
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.linearRampToValueAtTime(0.0001, now + 0.1);
+      });
+      // Only fully suspend if no washes are running
+      if (activeWashesRef.current.length === 0) {
+        await ctx.suspend();
+      }
       setIsPlaying(false);
     } else {
-      await ctx.resume();
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      // Restore all studio channel volumes
+      const now = ctx.currentTime;
+      Object.keys(channelGainsRef.current).forEach(key => {
+        const gainNode = channelGainsRef.current[key];
+        const savedVol = channelVolumesRef.current[key] || 0;
+        if (savedVol > 0.0001) {
+          gainNode.gain.cancelScheduledValues(now);
+          gainNode.gain.linearRampToValueAtTime(savedVol, now + 0.1);
+        }
+      });
       setIsPlaying(true);
     }
   }, [isPlaying, initEngine]);
@@ -700,11 +723,15 @@ export function useAudioEngine(options?: EngineOptions) {
 
     const wasSuspended = ctx.state === 'suspended';
     if (wasSuspended) {
+      // Mute all studio channels BEFORE resuming so presets don't auto-play
+      Object.keys(channelGainsRef.current).forEach(key => {
+        const gainNode = channelGainsRef.current[key];
+        gainNode.gain.setValueAtTime(0.0001, ctx.currentTime);
+      });
       await ctx.resume();
-      setIsPlaying(true);
-      masterGainRef.current.gain.cancelScheduledValues(now);
-      masterGainRef.current.gain.setValueAtTime(0, now);
-      masterGainRef.current.gain.linearRampToValueAtTime(1, now + 0.1);
+      // Do NOT set isPlaying — play button controls presets independently
+      masterGainRef.current.gain.cancelScheduledValues(ctx.currentTime);
+      masterGainRef.current.gain.setValueAtTime(1, ctx.currentTime);
     }
 
     const washId = Math.random().toString(36).substring(7);
