@@ -567,34 +567,54 @@ export function useAudioEngine(options?: EngineOptions) {
     return analyserRef.current;
   }, []);
 
-  const [isWashing, setIsWashing] = useState(false);
-
-  const [activeWashType, setActiveWashType] = useState<'euphoric' | 'flashbang' | 'liquid' | 'ascender' | null>(null);
-
-
-  const activeWashRef = useRef<{type: string, startOffset: number, duration: number, startFreq: number} | null>(null);
+  const [activeWashTypes, setActiveWashTypes] = useState<string[]>([]);
+  const activeWashesRef = useRef<{id: string, type: string, startOffset: number, duration: number, startFreq: number}[]>([]);
 
   const getActiveWashData = useCallback(() => {
-     if (!audioCtxRef.current || !activeWashRef.current) return null;
-     const elapsed = audioCtxRef.current.currentTime - activeWashRef.current.startOffset;
-     if (elapsed >= activeWashRef.current.duration) return null;
+     if (!audioCtxRef.current || activeWashesRef.current.length === 0) return [];
      
-     const { type, startFreq, duration } = activeWashRef.current;
-     let displayHz = "";
+     const now = audioCtxRef.current.currentTime;
+     const currentWashes = [];
      
-     if (type === 'euphoric') {
-         displayHz = "Harmonics Active";
-     } else if (type === 'flashbang') {
-         displayHz = "Sub-Bass Drop";
-     } else if (type === 'liquid') {
-         displayHz = "Wavefolding";
-     } else if (type === 'ascender') {
-         const baseFreq = startFreq / 2;
-         const currentPitch = baseFreq * Math.pow((baseFreq * 4) / baseFreq, elapsed / duration);
-         displayHz = `${Math.round(currentPitch)} Hz Rising`;
+     for (const wash of activeWashesRef.current) {
+         const elapsed = now - wash.startOffset;
+         if (elapsed >= wash.duration) continue;
+         
+         const { type, startFreq, duration, id } = wash;
+         let displayHz = "";
+         
+         if (type === 'euphoric') {
+             const startF = 4000;
+             const endF = 100;
+             const currentF = startF * Math.pow(endF / startF, elapsed / duration);
+             displayHz = `${Math.round(currentF)} Hz LPF`;
+         } else if (type === 'flashbang') {
+             const startF = 200;
+             const endF = 4000;
+             const currentF = startF * Math.pow(endF / startF, elapsed / 5);
+             if (elapsed <= 5) displayHz = `${Math.round(currentF)} Hz HPF`;
+             else displayHz = "4000 Hz HPF";
+         } else if (type === 'liquid') {
+             const startF = 200;
+             const midF = 3000;
+             const halfDuration = duration / 2;
+             let currentF = startF;
+             if (elapsed <= halfDuration) {
+                 currentF = startF * Math.pow(midF / startF, elapsed / halfDuration);
+             } else {
+                 currentF = midF * Math.pow(startF / midF, (elapsed - halfDuration) / halfDuration);
+             }
+             displayHz = `${Math.round(currentF)} Hz BPF`;
+         } else if (type === 'ascender') {
+             const baseFreq = startFreq / 2;
+             const currentPitch = baseFreq * Math.pow((baseFreq * 4) / baseFreq, elapsed / duration);
+             displayHz = `${Math.round(currentPitch)} Hz Rising`;
+         }
+         
+         currentWashes.push({ id, type, elapsed, duration, displayHz });
      }
      
-     return { type, elapsed, duration, displayHz };
+     return currentWashes;
   }, []);
 
   const triggerSweep = useCallback(async (startFreq: number, durationSeconds: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' = 'euphoric') => {
@@ -603,7 +623,7 @@ export function useAudioEngine(options?: EngineOptions) {
       return;
     }
 
-    if (isWashing) return; 
+    if (activeWashesRef.current.some(w => w.type === type)) return; 
     
     if (!audioCtxRef.current) initEngine();
     const ctx = audioCtxRef.current;
@@ -620,28 +640,27 @@ export function useAudioEngine(options?: EngineOptions) {
       masterGainRef.current.gain.linearRampToValueAtTime(1, now + 0.1);
     }
 
-    setIsWashing(true);
-    setActiveWashType(type);
+    const washId = Math.random().toString(36).substring(7);
+    const isFirstWash = activeWashesRef.current.length === 0;
 
-    activeWashRef.current = { type, startOffset: now, duration: durationSeconds, startFreq };
+    setActiveWashTypes(prev => [...prev, type]);
+    activeWashesRef.current.push({ id: washId, type, startOffset: now, duration: durationSeconds, startFreq });
 
-    Object.keys(channelGainsRef.current).forEach(key => {
-        const gainNode = channelGainsRef.current[key];
-        const currentVol = channelVolumesRef.current[key] || 0;
-        if (currentVol > 0.0001) {
-            gainNode.gain.cancelScheduledValues(now);
-            if (wasSuspended) {
-                gainNode.gain.setValueAtTime(0.0001, now);
-            } else {
-                gainNode.gain.setValueAtTime(currentVol, now);
-                gainNode.gain.linearRampToValueAtTime(0.0001, now + 1.0);
+    if (isFirstWash) {
+        Object.keys(channelGainsRef.current).forEach(key => {
+            const gainNode = channelGainsRef.current[key];
+            const currentVol = channelVolumesRef.current[key] || 0;
+            if (currentVol > 0.0001) {
+                gainNode.gain.cancelScheduledValues(now);
+                if (wasSuspended) {
+                    gainNode.gain.setValueAtTime(0.0001, now);
+                } else {
+                    gainNode.gain.setValueAtTime(currentVol, now);
+                    gainNode.gain.linearRampToValueAtTime(0.0001, now + 1.0);
+                }
             }
-            if (!wasSuspended) {
-                gainNode.gain.setValueAtTime(0.0001, now + durationSeconds);
-                gainNode.gain.linearRampToValueAtTime(currentVol, now + durationSeconds + 3.0);
-            }
-        }
-    });
+        });
+    }
 
     const washMasterGain = ctx.createGain();
     washMasterGain.gain.value = 0.01;
@@ -855,23 +874,33 @@ export function useAudioEngine(options?: EngineOptions) {
     }
 
     setTimeout(() => {
-        setIsWashing(false);
-        setActiveWashType(null);
+        setActiveWashTypes(prev => prev.filter(t => t !== type));
+        activeWashesRef.current = activeWashesRef.current.filter(w => w.id !== washId);
 
-        activeWashRef.current = null;
         activeNodes.forEach(node => {
             try { node.disconnect(); } catch { /* ignore */ }
         });
         washMasterGain.disconnect();
         
-        if (wasSuspended) {
-            ctx.suspend();
-            setIsPlaying(false);
-            masterGainRef.current?.gain.setValueAtTime(0, ctx.currentTime);
+        if (activeWashesRef.current.length === 0) {
+            Object.keys(channelGainsRef.current).forEach(key => {
+                const gainNode = channelGainsRef.current[key];
+                const currentVol = channelVolumesRef.current[key] || 0;
+                if (currentVol > 0.0001) {
+                    gainNode.gain.cancelScheduledValues(ctx.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(currentVol, ctx.currentTime + 3.0);
+                }
+            });
+
+            if (wasSuspended) {
+                ctx.suspend();
+                setIsPlaying(false);
+                masterGainRef.current?.gain.setValueAtTime(0, ctx.currentTime);
+            }
         }
     }, (durationSeconds + 1) * 1000);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initEngine, isWashing]);
+  }, [initEngine]);
 
-  return { isPlaying, isWashing, activeWashType, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };
+  return { isPlaying, activeWashTypes, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };
 }
