@@ -733,9 +733,11 @@ export function useAudioEngine(options?: EngineOptions) {
     const wasSuspended = ctx.state === 'suspended';
     if (wasSuspended) {
       // Mute all studio channels BEFORE resuming so presets don't auto-play
+      // Use .value (instant) not setValueAtTime (scheduled) to avoid race condition
       Object.keys(channelGainsRef.current).forEach(key => {
         const gainNode = channelGainsRef.current[key];
-        gainNode.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gainNode.gain.cancelScheduledValues(0);
+        gainNode.gain.value = 0;
       });
       await ctx.resume();
       // Do NOT set isPlaying — play button controls presets independently
