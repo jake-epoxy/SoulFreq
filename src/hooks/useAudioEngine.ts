@@ -1499,5 +1499,15 @@ export function useAudioEngine(options?: EngineOptions) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initEngine]);
 
-  return { isPlaying, activeWashTypes, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, toggleWash };
+  const setWashVolume = useCallback((washType: string, value: number) => {
+    const wash = activeWashesRef.current.find(w => w.type === washType);
+    if (wash?.washMasterGain && audioCtxRef.current) {
+      const ctx = audioCtxRef.current;
+      const normalized = Math.max(value / 100, 0.0001);
+      wash.washMasterGain.gain.cancelScheduledValues(ctx.currentTime);
+      wash.washMasterGain.gain.linearRampToValueAtTime(normalized, ctx.currentTime + 0.1);
+    }
+  }, []);
+
+  return { isPlaying, activeWashTypes, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, toggleWash, setWashVolume };
 }

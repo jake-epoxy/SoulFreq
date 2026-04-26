@@ -103,9 +103,10 @@ interface StudioProps {
 }
 
 
-const WashHUDItem = ({ type, getActiveWashData }: { type: string, getActiveWashData: () => {type: string, elapsed: number, displayHz: string}[] }) => {
+const WashHUDItem = ({ type, getActiveWashData, setWashVolume }: { type: string, getActiveWashData: () => {type: string, elapsed: number, displayHz: string}[], setWashVolume: (type: string, value: number) => void }) => {
     const hudHzRef = useRef<HTMLSpanElement>(null);
     const [isVisible, setIsVisible] = useState(false);
+    const [vol, setVol] = useState(100);
 
     useEffect(() => {
         requestAnimationFrame(() => setIsVisible(true));
@@ -134,6 +135,16 @@ const WashHUDItem = ({ type, getActiveWashData }: { type: string, getActiveWashD
              </div>
              <span ref={hudHzRef} style={{ color: accent, fontWeight: 'bold', fontFamily: 'monospace', fontSize: '1.2rem', textShadow: `0 0 10px ${accent}80` }}>-- Hz</span>
            </div>
+           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+             <Speaker size={14} style={{ color: accent, opacity: 0.7, flexShrink: 0 }} />
+             <input 
+               type="range" min="0" max="100" value={vol}
+               onChange={(e) => { const v = Number(e.target.value); setVol(v); setWashVolume(type, v); }}
+               className="freq-slider"
+               style={{ flex: 1, accentColor: accent }}
+             />
+             <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontFamily: 'monospace', minWidth: '30px', textAlign: 'right' }}>{vol}%</span>
+           </div>
            <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', position: 'relative', overflow: 'hidden' }}>
              <div style={{ width: '40%', height: '100%', background: `linear-gradient(90deg, transparent, ${accent}, transparent)`, position: 'absolute', animation: 'scanline 2s infinite linear' }} />
            </div>
@@ -144,7 +155,7 @@ const WashHUDItem = ({ type, getActiveWashData }: { type: string, getActiveWashD
 
 export default function Studio({ initialPreset, isPremium }: StudioProps) {
   const [showPaywall, setShowPaywall] = useState(false);
-  const { isPlaying, activeWashTypes, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, toggleWash } = useAudioEngine({
+  const { isPlaying, activeWashTypes, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, toggleWash, setWashVolume } = useAudioEngine({
     isPremium,
     onCutoff: () => setShowPaywall(true)
   });
@@ -564,6 +575,32 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
               <Zap size={18} />
               Kinetic Washes (Scroll Stoppers)
             </h4>
+
+            {/* Quick-Mix Combos */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <button
+                className="cta-button"
+                style={{ padding: '0.5rem 1rem', borderRadius: '50px', border: '1px solid rgba(0, 240, 255, 0.3)', background: 'rgba(0, 240, 255, 0.05)', color: '#00F0FF', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s ease', letterSpacing: '1px' }}
+                onClick={async () => { await toggleWash(432, 'euphoric'); await toggleWash(432, 'tibetan'); }}
+              >
+                ⚡ The Temple
+              </button>
+              <button
+                className="cta-button"
+                style={{ padding: '0.5rem 1rem', borderRadius: '50px', border: '1px solid rgba(255, 0, 128, 0.3)', background: 'rgba(255, 0, 128, 0.05)', color: '#FF0080', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s ease', letterSpacing: '1px' }}
+                onClick={async () => { await toggleWash(432, 'descender'); await toggleWash(432, 'nervetap'); }}
+              >
+                🧠 The Reset
+              </button>
+              <button
+                className="cta-button"
+                style={{ padding: '0.5rem 1rem', borderRadius: '50px', border: '1px solid rgba(255, 215, 0, 0.3)', background: 'rgba(255, 215, 0, 0.05)', color: '#FFD700', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s ease', letterSpacing: '1px' }}
+                onClick={async () => { await toggleWash(432, 'ascender'); await toggleWash(432, 'euphoric'); await toggleWash(432, 'audirall'); }}
+              >
+                🚀 The Full Stack
+              </button>
+            </div>
+
             <div className="kinetic-washes-grid">
               <button 
                 className="cta-button"
@@ -654,7 +691,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
             {/* Real-time Frequency HUDs */}
             <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {activeWashTypes.map(type => (
-                    <WashHUDItem key={type} type={type} getActiveWashData={getActiveWashData} />
+                    <WashHUDItem key={type} type={type} getActiveWashData={getActiveWashData} setWashVolume={setWashVolume} />
                 ))}
             </div>
         </div>
