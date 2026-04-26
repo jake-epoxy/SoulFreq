@@ -77,7 +77,7 @@ function App() {
       const urlParams = new URLSearchParams(window.location.search);
       // Auto-bypass the funnel for logged-in users on refresh
       if (session && !urlParams.get('payment')) {
-        navigate(isUserPremium ? 'protocol' : 'studio');
+        navigate('dashboard');
       }
     });
 
@@ -259,7 +259,10 @@ function App() {
               transition={{ duration: 0.5 }}
               style={{ width: '100%' }}
             >
-              <Dashboard />
+              <Dashboard 
+                onEnterStudio={() => navigate('studio')} 
+                onEnterProtocol={() => navigate('protocol')} 
+              />
             </motion.div>
           )}
         </AnimatePresence>

@@ -10,7 +10,12 @@ interface Session {
   created_at: string;
 }
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onEnterStudio: () => void;
+  onEnterProtocol: () => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onEnterStudio, onEnterProtocol }) => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -123,6 +128,27 @@ const Dashboard: React.FC = () => {
             <span className="stat-value">{sessions.length}</span>
           </div>
         </div>
+      </motion.div>
+
+      <motion.div 
+        className="dashboard-actions"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginBottom: '3rem' }}
+      >
+        <button 
+          onClick={onEnterStudio}
+          style={{ padding: '1rem 2rem', borderRadius: '50px', border: 'none', background: 'var(--brand-cyan)', color: '#000', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 0 20px rgba(0, 240, 255, 0.3)' }}
+        >
+          Enter the Studio
+        </button>
+        <button 
+          onClick={onEnterProtocol}
+          style={{ padding: '1rem 2rem', borderRadius: '50px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', fontSize: '1.1rem', cursor: 'pointer' }}
+        >
+          The Protocol
+        </button>
       </motion.div>
 
       <motion.div 
