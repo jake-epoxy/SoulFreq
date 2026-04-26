@@ -683,6 +683,18 @@ export function useAudioEngine(options?: EngineOptions) {
 
         activeWashesRef.current.splice(existingWashIndex, 1);
         setActiveWashTypes(prev => prev.filter(t => t !== type));
+
+        // If that was the last active wash, restore all studio channel volumes
+        if (activeWashesRef.current.length === 0) {
+            Object.keys(channelGainsRef.current).forEach(key => {
+                const gainNode = channelGainsRef.current[key];
+                const savedVol = channelVolumesRef.current[key] || 0;
+                if (savedVol > 0.0001) {
+                    gainNode.gain.cancelScheduledValues(now);
+                    gainNode.gain.linearRampToValueAtTime(savedVol, now + 1.0);
+                }
+            });
+        }
         return;
     }
 
@@ -696,25 +708,9 @@ export function useAudioEngine(options?: EngineOptions) {
     }
 
     const washId = Math.random().toString(36).substring(7);
-    const isFirstWash = activeWashesRef.current.length === 0;
 
     setActiveWashTypes(prev => [...prev, type]);
 
-    if (isFirstWash) {
-        Object.keys(channelGainsRef.current).forEach(key => {
-            const gainNode = channelGainsRef.current[key];
-            const currentVol = channelVolumesRef.current[key] || 0;
-            if (currentVol > 0.0001) {
-                gainNode.gain.cancelScheduledValues(now);
-                if (wasSuspended) {
-                    gainNode.gain.setValueAtTime(0.0001, now);
-                } else {
-                    gainNode.gain.setValueAtTime(currentVol, now);
-                    gainNode.gain.linearRampToValueAtTime(0.0001, now + 1.0);
-                }
-            }
-        });
-    }
 
     const washMasterGain = ctx.createGain();
     washMasterGain.gain.setValueAtTime(0.0001, now);
