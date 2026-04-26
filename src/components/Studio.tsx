@@ -523,7 +523,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
               <Zap size={18} />
               Kinetic Washes (Scroll Stoppers)
             </h4>
-            <div className="horizontal-scroll-row">
+            <div className="kinetic-washes-grid">
               <button 
                 className="cta-button"
                 style={{ padding: '0.75rem', background: activeWashTypes.includes('euphoric') ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: activeWashTypes.includes('euphoric') ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('euphoric') ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('euphoric') ? '0 0 20px rgba(0,240,255,0.4), inset 0 0 10px rgba(0,240,255,0.2)' : 'none' }}

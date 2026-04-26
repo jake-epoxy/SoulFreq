@@ -31,15 +31,8 @@
 
 @media (max-width: 768px) {
   .journeys-grid {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 1rem;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .journeys-grid::-webkit-scrollbar {
-    display: none;
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 }
 
@@ -58,9 +51,18 @@
 
 @media (max-width: 768px) {
   .journey-card {
-    min-width: 85vw;
-    scroll-snap-align: center;
-    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    padding: 1rem;
+    gap: 1rem;
+    min-width: auto;
+  }
+  .journey-content h4 {
+    margin-bottom: 0;
+    font-size: 1rem;
+  }
+  .journey-content p {
+    display: none;
   }
 }
 
@@ -138,6 +140,17 @@
   z-index: 1;
 }
 
+@media (max-width: 768px) {
+  .active-indicator {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .journey-icon-wrap {
+    width: 40px;
+    height: 40px;
+  }
+}
+
 
 /* Studio Grid */
 .studio-grid {
@@ -158,28 +171,20 @@
   .panel-order-3 { order: 3; }
 }
 
-.horizontal-scroll-row {
+.kinetic-washes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
 }
 
 @media (max-width: 768px) {
-  .horizontal-scroll-row {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 1rem;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  .kinetic-washes-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
-  .horizontal-scroll-row::-webkit-scrollbar {
-    display: none;
-  }
-  .horizontal-scroll-row > .cta-button {
-    min-width: 200px;
-    scroll-snap-align: center;
-    flex: 0 0 auto;
+  .kinetic-washes-grid .cta-button {
+    padding: 0.6rem !important;
+    font-size: 0.8rem !important;
   }
 }
 
