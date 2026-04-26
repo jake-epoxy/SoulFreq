@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 export type FrequencyChannel = '174 Hz' | '396 Hz' | '432 Hz' | '528 Hz' | '852 Hz' | '963 Hz' | 'Alpha' | 'Theta' | 'Custom' | 'Vinyl' | 'Void' | 'Rain' | 'White' | 'Liquid' | 'Ascender' | 'Euphoric' | 'Crystal';
 
@@ -17,6 +18,35 @@ export function useAudioEngine(options?: EngineOptions) {
   const cutoffTimerRef = useRef<number | null>(null);
   const playbackTimeRef = useRef<number>(initialTime);
   const CUTOFF_SECONDS = 120;
+
+  const sessionStartTimeRef = useRef<number | null>(null);
+
+  const logSessionToSupabase = async (durationSeconds: number) => {
+    if (durationSeconds < 10) return; 
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      await supabase.from('user_sessions').insert({
+        user_id: user.id,
+        duration_seconds: durationSeconds
+      });
+    } catch (e) {
+      console.error("Failed to log session", e);
+    }
+  };
+
+  useEffect(() => {
+    if (isPlaying) {
+      sessionStartTimeRef.current = Date.now();
+    } else {
+      if (sessionStartTimeRef.current) {
+        const durationSeconds = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
+        logSessionToSupabase(durationSeconds);
+        sessionStartTimeRef.current = null;
+      }
+    }
+  }, [isPlaying]);
   
   useEffect(() => {
     if (options?.isPremium) {

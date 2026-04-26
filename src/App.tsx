@@ -7,9 +7,10 @@ import Protocol from './components/Protocol';
 import Paywall from './components/Paywall';
 import AuthWall from './components/AuthWall';
 import ReloadPrompt from './components/ReloadPrompt';
+import Dashboard from './components/Dashboard';
 import { supabase } from './lib/supabase';
 
-export type AppStage = 'hero' | 'assessment' | 'auth' | 'studio' | 'protocol';
+export type AppStage = 'hero' | 'assessment' | 'auth' | 'studio' | 'protocol' | 'dashboard';
 
 function App() {
   const [stage, setStage] = useState<AppStage>('hero');
@@ -128,12 +129,20 @@ function App() {
         <nav className="top-nav-links">
           <a href="#" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.9rem' }}>The Science</a>
           {session ? (
-            <button 
-              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
-              onClick={() => supabase.auth.signOut().then(() => navigate('hero'))}
-            >
-              Sign Out
-            </button>
+            <>
+              <button 
+                style={{ background: 'none', border: 'none', color: stage === 'dashboard' ? 'var(--brand-cyan)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: stage === 'dashboard' ? 'bold' : 'normal' }}
+                onClick={() => navigate('dashboard')}
+              >
+                Dashboard
+              </button>
+              <button 
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
+                onClick={() => supabase.auth.signOut().then(() => navigate('hero'))}
+              >
+                Sign Out
+              </button>
+            </>
           ) : (
             <button 
               style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
@@ -233,6 +242,18 @@ function App() {
                   }
                 }} />
               )}
+            </motion.div>
+          )}
+
+          {stage === 'dashboard' && (
+            <motion.div 
+              key="dashboard"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              style={{ width: '100%' }}
+            >
+              <Dashboard />
             </motion.div>
           )}
         </AnimatePresence>
