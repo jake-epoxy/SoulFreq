@@ -48,13 +48,13 @@ function App() {
     async function fetchProfile(user: any) {
       if (!user) {
         setIsPremium(false);
-        return;
+        return false;
       }
       
       // Developer Override
       if (user.email === 'jakeflowers222@gmail.com') {
         setIsPremium(true);
-        return;
+        return true;
       }
       const { data } = await supabase
         .from('profiles')
@@ -64,12 +64,20 @@ function App() {
         
       if (data && data.is_premium) {
         setIsPremium(true);
+        return true;
       }
+      return false;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-      fetchProfile(session?.user);
+      const isUserPremium = await fetchProfile(session?.user);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      // Auto-bypass the funnel for logged-in users on refresh
+      if (session && !urlParams.get('payment')) {
+        navigate(isUserPremium ? 'protocol' : 'studio');
+      }
     });
 
     const {
@@ -230,7 +238,7 @@ function App() {
         </AnimatePresence>
       </main>
       
-      {stage !== 'assessment' && stage !== 'auth' && (
+      {stage !== 'assessment' && stage !== 'auth' && stage !== 'hero' && (
         <footer style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)', fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '4rem' }}>
           <p>&copy; 2026 Kinesus. High-End Frequency Engine.</p>
         </footer>

@@ -103,9 +103,8 @@ interface StudioProps {
 }
 
 
-const WashHUDItem = ({ type, getActiveWashData }: { type: string, getActiveWashData: () => {type: string, elapsed: number, duration: number, displayHz: string}[] }) => {
+const WashHUDItem = ({ type, getActiveWashData }: { type: string, getActiveWashData: () => {type: string, elapsed: number, displayHz: string}[] }) => {
     const hudHzRef = useRef<HTMLSpanElement>(null);
-    const hudProgRef = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -113,10 +112,9 @@ const WashHUDItem = ({ type, getActiveWashData }: { type: string, getActiveWashD
         let animationFrameId: number;
         const render = () => {
             const dataArray = getActiveWashData();
-            const data = dataArray.find((d: {type: string, elapsed: number, duration: number, displayHz: string}) => d.type === type);
-            if (data && hudHzRef.current && hudProgRef.current) {
+            const data = dataArray.find((d: {type: string, elapsed: number, displayHz: string}) => d.type === type);
+            if (data && hudHzRef.current) {
                 hudHzRef.current.innerText = data.displayHz;
-                hudProgRef.current.style.width = `${(data.elapsed / data.duration) * 100}%`;
             }
             animationFrameId = requestAnimationFrame(render);
         };
@@ -124,24 +122,29 @@ const WashHUDItem = ({ type, getActiveWashData }: { type: string, getActiveWashD
         return () => cancelAnimationFrame(animationFrameId);
     }, [type, getActiveWashData]);
 
-    const title = type === 'euphoric' ? 'Euphoric Wash' : type === 'flashbang' ? 'Somatic Flashbang' : type === 'liquid' ? 'Liquid Fold' : 'Infinite Ascender';
+    const title = type === 'euphoric' ? 'Euphoric Wash' : type === 'flashbang' ? 'Somatic Flashbang' : type === 'liquid' ? 'Liquid Fold' : type === 'glitch' ? 'Neuro-Glitch' : type === 'cyber' ? 'Cyber Twinkle' : 'Infinite Ascender';
+    const accent = type === 'euphoric' ? '#00F0FF' : type === 'flashbang' ? '#FF0080' : type === 'liquid' ? '#00FF88' : type === 'glitch' ? '#B500FF' : type === 'cyber' ? '#00FFFF' : '#FFD700';
 
     return (
-        <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(0, 240, 255, 0.2)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: isVisible ? 1 : 0, transform: isVisible ? 'translateY(0)' : 'translateY(10px)', transition: 'all 0.3s ease' }}>
+        <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(0,10,15,0.8)', border: `1px solid ${accent}40`, borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '0.8rem', opacity: isVisible ? 1 : 0, transform: isVisible ? 'translateY(0)' : 'translateY(10px)', transition: 'all 0.3s ease', boxShadow: `0 0 20px ${accent}20, inset 0 0 10px ${accent}10` }}>
            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>{title} Live Synthesis</span>
-             <span ref={hudHzRef} style={{ color: '#00F0FF', fontWeight: 'bold', fontFamily: 'monospace', fontSize: '1.1rem' }}>-- Hz</span>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: accent, boxShadow: `0 0 15px ${accent}`, animation: 'pulse-dot 1.5s infinite ease-in-out' }} />
+                <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '3px', fontWeight: 'bold' }}>{title} Live</span>
+             </div>
+             <span ref={hudHzRef} style={{ color: accent, fontWeight: 'bold', fontFamily: 'monospace', fontSize: '1.2rem', textShadow: `0 0 10px ${accent}80` }}>-- Hz</span>
            </div>
-           <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-             <div ref={hudProgRef} style={{ width: '0%', height: '100%', background: 'linear-gradient(90deg, #00F0FF, #FF0080)', transition: 'width 0.1s linear' }} />
+           <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', position: 'relative', overflow: 'hidden' }}>
+             <div style={{ width: '40%', height: '100%', background: `linear-gradient(90deg, transparent, ${accent}, transparent)`, position: 'absolute', animation: 'scanline 2s infinite linear' }} />
            </div>
         </div>
     );
 };
 
+
 export default function Studio({ initialPreset, isPremium }: StudioProps) {
   const [showPaywall, setShowPaywall] = useState(false);
-  const { isPlaying, activeWashTypes, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep } = useAudioEngine({
+  const { isPlaying, activeWashTypes, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, getAnalyser, isRecording, startRecording, stopRecording, toggleWash } = useAudioEngine({
     isPremium,
     onCutoff: () => setShowPaywall(true)
   });
@@ -520,38 +523,48 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
               <Zap size={18} />
               Kinetic Washes (Scroll Stoppers)
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
               <button 
                 className="cta-button"
-                style={{ padding: '0.75rem', background: activeWashTypes.includes('euphoric') ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: activeWashTypes.includes('euphoric') ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('euphoric') ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: activeWashTypes.includes('euphoric') ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: activeWashTypes.includes('euphoric') ? 0.6 : 1 }}
-                onClick={() => triggerSweep(customBase, 30, 'euphoric')}
-                disabled={activeWashTypes.includes('euphoric')}
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('euphoric') ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: activeWashTypes.includes('euphoric') ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('euphoric') ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('euphoric') ? '0 0 20px rgba(0,240,255,0.4), inset 0 0 10px rgba(0,240,255,0.2)' : 'none' }}
+                onClick={() => toggleWash(customBase, 'euphoric')}
               >
-                Euphoric Wash
+                {activeWashTypes.includes('euphoric') ? '■ STOP EUPHORIC' : 'Euphoric Wash'}
               </button>
               <button 
                 className="cta-button"
-                style={{ padding: '0.75rem', background: activeWashTypes.includes('flashbang') ? 'rgba(255, 0, 128, 0.1)' : 'linear-gradient(90deg, #FF0080, #7928CA)', border: activeWashTypes.includes('flashbang') ? '1px solid rgba(255, 0, 128, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('flashbang') ? '#FF0080' : 'white', fontWeight: 'bold', cursor: activeWashTypes.includes('flashbang') ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: activeWashTypes.includes('flashbang') ? 0.6 : 1 }}
-                onClick={() => triggerSweep(customBase, 30, 'flashbang')}
-                disabled={activeWashTypes.includes('flashbang')}
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('flashbang') ? 'rgba(255, 0, 128, 0.1)' : 'linear-gradient(90deg, #FF0080, #7928CA)', border: activeWashTypes.includes('flashbang') ? '1px solid rgba(255, 0, 128, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('flashbang') ? '#FF0080' : 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('flashbang') ? '0 0 20px rgba(255,0,128,0.4), inset 0 0 10px rgba(255,0,128,0.2)' : 'none' }}
+                onClick={() => toggleWash(customBase, 'flashbang')}
               >
-                Somatic Flashbang
+                {activeWashTypes.includes('flashbang') ? '■ STOP FLASHBANG' : 'Somatic Flashbang'}
               </button>
               <button 
                 className="cta-button"
-                style={{ padding: '0.75rem', background: activeWashTypes.includes('liquid') ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(90deg, #00FF88, #008855)', border: activeWashTypes.includes('liquid') ? '1px solid rgba(0, 255, 136, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('liquid') ? '#00FF88' : 'black', fontWeight: 'bold', cursor: activeWashTypes.includes('liquid') ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: activeWashTypes.includes('liquid') ? 0.6 : 1 }}
-                onClick={() => triggerSweep(customBase, 30, 'liquid')}
-                disabled={activeWashTypes.includes('liquid')}
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('liquid') ? 'rgba(0, 255, 136, 0.1)' : 'linear-gradient(90deg, #00FF88, #008855)', border: activeWashTypes.includes('liquid') ? '1px solid rgba(0, 255, 136, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('liquid') ? '#00FF88' : 'black', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('liquid') ? '0 0 20px rgba(0,255,136,0.4), inset 0 0 10px rgba(0,255,136,0.2)' : 'none' }}
+                onClick={() => toggleWash(customBase, 'liquid')}
               >
-                Liquid Fold
+                {activeWashTypes.includes('liquid') ? '■ STOP LIQUID' : 'Liquid Fold'}
               </button>
               <button 
                 className="cta-button"
-                style={{ padding: '0.75rem', background: activeWashTypes.includes('ascender') ? 'rgba(255, 215, 0, 0.1)' : 'linear-gradient(90deg, #FFD700, #FF8C00)', border: activeWashTypes.includes('ascender') ? '1px solid rgba(255, 215, 0, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('ascender') ? '#FFD700' : 'black', fontWeight: 'bold', cursor: activeWashTypes.includes('ascender') ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: activeWashTypes.includes('ascender') ? 0.6 : 1 }}
-                onClick={() => triggerSweep(customBase, 30, 'ascender')}
-                disabled={activeWashTypes.includes('ascender')}
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('glitch') ? 'rgba(181, 0, 255, 0.1)' : 'linear-gradient(90deg, #B500FF, #00FF88)', border: activeWashTypes.includes('glitch') ? '1px solid rgba(181, 0, 255, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('glitch') ? '#B500FF' : 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('glitch') ? '0 0 20px rgba(181,0,255,0.4), inset 0 0 10px rgba(181,0,255,0.2)' : 'none' }}
+                onClick={() => toggleWash(customBase, 'glitch')}
               >
-                Infinite Ascender
+                {activeWashTypes.includes('glitch') ? '■ STOP NEURO-GLITCH' : 'Neuro-Glitch'}
+              </button>
+              <button 
+                className="cta-button"
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('cyber') ? 'rgba(0, 255, 255, 0.1)' : 'linear-gradient(90deg, #00FFFF, #0088FF)', border: activeWashTypes.includes('cyber') ? '1px solid rgba(0, 255, 255, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('cyber') ? '#00FFFF' : 'black', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('cyber') ? '0 0 20px rgba(0,255,255,0.4), inset 0 0 10px rgba(0,255,255,0.2)' : 'none' }}
+                onClick={() => toggleWash(customBase, 'cyber')}
+              >
+                {activeWashTypes.includes('cyber') ? '■ STOP CYBER TWINKLE' : 'Cyber Twinkle'}
+              </button>
+              <button 
+                className="cta-button"
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('ascender') ? 'rgba(255, 215, 0, 0.1)' : 'linear-gradient(90deg, #FFD700, #FF8C00)', border: activeWashTypes.includes('ascender') ? '1px solid rgba(255, 215, 0, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('ascender') ? '#FFD700' : 'black', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('ascender') ? '0 0 20px rgba(255,215,0,0.4), inset 0 0 10px rgba(255,215,0,0.2)' : 'none' }}
+                onClick={() => toggleWash(customBase, 'ascender')}
+              >
+                {activeWashTypes.includes('ascender') ? '■ STOP ASCENDER' : 'Infinite Ascender'}
               </button>
             </div>
             
@@ -701,7 +714,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         )}
       </AnimatePresence>
       <OnboardingModal 
-        onInitiate={() => triggerSweep(customBase, 30, 'flashbang')} 
+        onInitiate={() => toggleWash(customBase, 'flashbang')} 
         onSkip={() => {}} 
       />
     </section>

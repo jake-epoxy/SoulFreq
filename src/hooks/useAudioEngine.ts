@@ -568,7 +568,7 @@ export function useAudioEngine(options?: EngineOptions) {
   }, []);
 
   const [activeWashTypes, setActiveWashTypes] = useState<string[]>([]);
-  const activeWashesRef = useRef<{id: string, type: string, startOffset: number, duration: number, startFreq: number}[]>([]);
+  const activeWashesRef = useRef<{id: string, type: string, startOffset: number, duration: number, startFreq: number, nodes?: AudioNode[], washMasterGain?: GainNode}[]>([]);
 
   const getActiveWashData = useCallback(() => {
      if (!audioCtxRef.current || activeWashesRef.current.length === 0) return [];
@@ -578,60 +578,68 @@ export function useAudioEngine(options?: EngineOptions) {
      
      for (const wash of activeWashesRef.current) {
          const elapsed = now - wash.startOffset;
-         if (elapsed >= wash.duration) continue;
-         
-         const { type, startFreq, duration, id } = wash;
+         const { type, startFreq, id } = wash;
          let displayHz = "";
          
          if (type === 'euphoric') {
-             const startF = 4000;
-             const endF = 100;
-             const currentF = startF * Math.pow(endF / startF, elapsed / duration);
+             const cycle = (Math.sin(elapsed * Math.PI * 2 / 30) + 1) / 2;
+             const currentF = 100 * Math.pow(4000 / 100, cycle);
              displayHz = `${Math.round(currentF)} Hz LPF`;
          } else if (type === 'flashbang') {
-             const startF = 200;
-             const endF = 4000;
-             const currentF = startF * Math.pow(endF / startF, elapsed / 5);
-             if (elapsed <= 5) displayHz = `${Math.round(currentF)} Hz HPF`;
-             else displayHz = "4000 Hz HPF";
+             displayHz = "6000 Hz RES";
          } else if (type === 'liquid') {
-             const startF = 200;
-             const midF = 3000;
-             const halfDuration = duration / 2;
-             let currentF = startF;
-             if (elapsed <= halfDuration) {
-                 currentF = startF * Math.pow(midF / startF, elapsed / halfDuration);
-             } else {
-                 currentF = midF * Math.pow(startF / midF, (elapsed - halfDuration) / halfDuration);
-             }
+             const cycle = (Math.sin(elapsed * Math.PI * 2 / 15) + 1) / 2;
+             const currentF = 200 * Math.pow(3000 / 200, cycle);
              displayHz = `${Math.round(currentF)} Hz BPF`;
+         } else if (type === 'glitch') {
+             const popSpeed = (elapsed % 1) < 0.5 ? '16Hz' : '4Hz';
+             const freqDisplay = Math.random() > 0.9 ? '852' : '528';
+             displayHz = `[${freqDisplay}Hz] AM-${popSpeed}`;
+         } else if (type === 'cyber') {
+             const poly = Math.random() > 0.5 ? 'SYNC' : 'OFFSET';
+             displayHz = `[852Hz] POLY-${poly}`;
          } else if (type === 'ascender') {
              const baseFreq = startFreq / 2;
-             const currentPitch = baseFreq * Math.pow((baseFreq * 4) / baseFreq, elapsed / duration);
+             const cycle = (elapsed % 30) / 30;
+             const currentPitch = baseFreq * Math.pow(4, cycle);
              displayHz = `${Math.round(currentPitch)} Hz Rising`;
          }
          
-         currentWashes.push({ id, type, elapsed, duration, displayHz });
+         currentWashes.push({ id, type, elapsed, displayHz });
      }
      
      return currentWashes;
   }, []);
 
-  const triggerSweep = useCallback(async (startFreq: number, durationSeconds: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' = 'euphoric') => {
+  const toggleWash = useCallback(async (startFreq: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' | 'glitch' | 'cyber' = 'euphoric') => {
     if (!options?.isPremium && playbackTimeRef.current >= CUTOFF_SECONDS) {
       if (options?.onCutoff) options.onCutoff();
       return;
     }
 
-    if (activeWashesRef.current.some(w => w.type === type)) return; 
-    
     if (!audioCtxRef.current) initEngine();
     const ctx = audioCtxRef.current;
     if (!ctx || !masterGainRef.current) return;
-
     const now = ctx.currentTime;
-    const wasSuspended = ctx.state === 'suspended';
 
+    const existingWashIndex = activeWashesRef.current.findIndex((w) => w.type === type);
+    if (existingWashIndex !== -1) {
+        const wash = activeWashesRef.current[existingWashIndex];
+        wash.washMasterGain?.gain.cancelScheduledValues(now);
+        if (wash.washMasterGain) wash.washMasterGain.gain.setValueAtTime(wash.washMasterGain.gain.value, now);
+        wash.washMasterGain?.gain.linearRampToValueAtTime(0.0001, now + 2);
+        
+        setTimeout(() => {
+            wash.nodes?.forEach((node: AudioNode) => { try { node.disconnect(); } catch { /* ignore */ } });
+            try { wash.washMasterGain?.disconnect(); } catch { /* ignore */ }
+        }, 2100);
+
+        activeWashesRef.current.splice(existingWashIndex, 1);
+        setActiveWashTypes(prev => prev.filter(t => t !== type));
+        return;
+    }
+
+    const wasSuspended = ctx.state === 'suspended';
     if (wasSuspended) {
       await ctx.resume();
       setIsPlaying(true);
@@ -644,7 +652,6 @@ export function useAudioEngine(options?: EngineOptions) {
     const isFirstWash = activeWashesRef.current.length === 0;
 
     setActiveWashTypes(prev => [...prev, type]);
-    activeWashesRef.current.push({ id: washId, type, startOffset: now, duration: durationSeconds, startFreq });
 
     if (isFirstWash) {
         Object.keys(channelGainsRef.current).forEach(key => {
@@ -663,23 +670,32 @@ export function useAudioEngine(options?: EngineOptions) {
     }
 
     const washMasterGain = ctx.createGain();
-    washMasterGain.gain.value = 0.01;
+    washMasterGain.gain.setValueAtTime(0.0001, now);
+    washMasterGain.gain.exponentialRampToValueAtTime(1.0, now + 2);
     washMasterGain.connect(masterGainRef.current);
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const activeNodes: any[] = [];
 
     if (type === 'euphoric') {
-        washMasterGain.gain.exponentialRampToValueAtTime(1.0, now + 2);
-        washMasterGain.gain.setValueAtTime(1.0, now + durationSeconds - 5);
-        washMasterGain.gain.linearRampToValueAtTime(0.0001, now + durationSeconds);
-
         const submersionFilter = ctx.createBiquadFilter();
         submersionFilter.type = 'lowpass';
-        submersionFilter.frequency.setValueAtTime(4000, now);
-        submersionFilter.frequency.exponentialRampToValueAtTime(100, now + durationSeconds);
         submersionFilter.Q.value = 1.5;
         
+        const filterLFO = ctx.createOscillator();
+        filterLFO.type = 'sine';
+        filterLFO.frequency.value = 1 / 30;
+        
+        const filterScale = ctx.createGain();
+        filterScale.gain.value = 1950;
+        
+        filterLFO.connect(filterScale);
+        filterScale.connect(submersionFilter.frequency);
+        submersionFilter.frequency.value = 2050;
+        
+        filterLFO.start(now);
+        activeNodes.push(filterLFO, filterScale);
+
         const stereoPanner = ctx.createStereoPanner();
         stereoPanner.pan.setValueAtTime(0, now);
         const panLFO = ctx.createOscillator();
@@ -687,12 +703,11 @@ export function useAudioEngine(options?: EngineOptions) {
         panLFO.frequency.value = 0.1;
         const panDepth = ctx.createGain();
         panDepth.gain.setValueAtTime(0, now);
-        panDepth.gain.linearRampToValueAtTime(0.8, now + (durationSeconds / 2));
+        panDepth.gain.linearRampToValueAtTime(0.8, now + 5);
         panLFO.connect(panDepth);
         panDepth.connect(stereoPanner.pan);
         panLFO.start(now);
-        panLFO.stop(now + durationSeconds);
-        activeNodes.push(panLFO);
+        activeNodes.push(panLFO, panDepth);
 
         submersionFilter.connect(stereoPanner);
         stereoPanner.connect(washMasterGain);
@@ -712,7 +727,6 @@ export function useAudioEngine(options?: EngineOptions) {
                detuneOsc.connect(dGain);
                dGain.connect(submersionFilter);
                detuneOsc.start(now);
-               detuneOsc.stop(now + durationSeconds);
                activeNodes.push(detuneOsc, dGain);
             }
             const oscGain = ctx.createGain();
@@ -720,7 +734,6 @@ export function useAudioEngine(options?: EngineOptions) {
             osc.connect(oscGain);
             oscGain.connect(submersionFilter);
             osc.start(now);
-            osc.stop(now + durationSeconds);
             activeNodes.push(osc, oscGain);
         });
 
@@ -736,25 +749,23 @@ export function useAudioEngine(options?: EngineOptions) {
         const noiseSource = ctx.createBufferSource();
         noiseSource.buffer = buffer;
         noiseSource.loop = true;
+        
         const noiseFilter = ctx.createBiquadFilter();
         noiseFilter.type = 'bandpass';
-        noiseFilter.frequency.setValueAtTime(2000, now);
-        noiseFilter.frequency.exponentialRampToValueAtTime(200, now + durationSeconds);
+        noiseFilter.frequency.value = 1000;
         noiseFilter.Q.value = 0.5;
+        
         const noiseGain = ctx.createGain();
         noiseGain.gain.setValueAtTime(0, now);
         noiseGain.gain.linearRampToValueAtTime(0.08, now + 3);
-        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + durationSeconds);
+        
         noiseSource.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(stereoPanner);
         noiseSource.start(now);
-        noiseSource.stop(now + durationSeconds);
         activeNodes.push(noiseSource, noiseFilter, noiseGain);
         
     } else if (type === 'flashbang') {
-        washMasterGain.gain.setValueAtTime(1.0, now); 
-        
         const flashbangDuration = 5; 
         
         const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -767,7 +778,7 @@ export function useAudioEngine(options?: EngineOptions) {
         const swellGain = ctx.createGain();
         swellGain.gain.setValueAtTime(0.0001, now);
         swellGain.gain.exponentialRampToValueAtTime(2.0, now + flashbangDuration); 
-        swellGain.gain.setValueAtTime(0.0001, now + flashbangDuration + 0.05); 
+        swellGain.gain.exponentialRampToValueAtTime(0.05, now + flashbangDuration + 2);
         
         const filter = ctx.createBiquadFilter();
         filter.type = 'highpass';
@@ -778,7 +789,6 @@ export function useAudioEngine(options?: EngineOptions) {
         filter.connect(swellGain);
         swellGain.connect(washMasterGain);
         noise.start(now);
-        noise.stop(now + durationSeconds);
         activeNodes.push(noise, filter, swellGain);
 
         const subOsc = ctx.createOscillator();
@@ -788,19 +798,39 @@ export function useAudioEngine(options?: EngineOptions) {
         subGain.gain.setValueAtTime(0.0001, now);
         subGain.gain.setValueAtTime(0.0001, now + flashbangDuration); 
         subGain.gain.linearRampToValueAtTime(1.0, now + flashbangDuration + 0.1); 
-        subGain.gain.linearRampToValueAtTime(0.0001, now + durationSeconds); 
+        subGain.gain.linearRampToValueAtTime(0.0001, now + flashbangDuration + 3); 
         
         subOsc.connect(subGain);
         subGain.connect(washMasterGain);
         subOsc.start(now);
-        subOsc.stop(now + durationSeconds);
         activeNodes.push(subOsc, subGain);
         
+        const ringOsc = ctx.createOscillator();
+        ringOsc.type = 'sine';
+        ringOsc.frequency.value = 6000;
+        
+        const amLFO = ctx.createOscillator();
+        amLFO.type = 'sine';
+        amLFO.frequency.value = 4;
+        const amGain = ctx.createGain();
+        amGain.gain.value = 0.5;
+        amLFO.connect(amGain);
+        
+        const ringGain = ctx.createGain();
+        ringGain.gain.setValueAtTime(0.0001, now);
+        ringGain.gain.setValueAtTime(0.0001, now + flashbangDuration);
+        ringGain.gain.exponentialRampToValueAtTime(0.15, now + flashbangDuration + 2);
+        
+        amGain.connect(ringGain.gain);
+        
+        ringOsc.connect(ringGain);
+        ringGain.connect(washMasterGain);
+        
+        ringOsc.start(now);
+        amLFO.start(now);
+        activeNodes.push(ringOsc, amLFO, amGain, ringGain);
+        
     } else if (type === 'liquid') {
-        washMasterGain.gain.exponentialRampToValueAtTime(1.0, now + 2);
-        washMasterGain.gain.setValueAtTime(1.0, now + durationSeconds - 5);
-        washMasterGain.gain.linearRampToValueAtTime(0.0001, now + durationSeconds);
-
         const curve = new Float32Array(4096);
         for (let i = 0; i < 4096; ++i) {
             const x = (i * 2) / 4096 - 1;
@@ -812,17 +842,24 @@ export function useAudioEngine(options?: EngineOptions) {
         
         const filter = ctx.createBiquadFilter();
         filter.type = 'bandpass';
-        filter.frequency.setValueAtTime(200, now);
-        filter.frequency.exponentialRampToValueAtTime(3000, now + durationSeconds / 2);
-        filter.frequency.exponentialRampToValueAtTime(200, now + durationSeconds);
         filter.Q.value = 5.0; 
+        
+        const filterLFO = ctx.createOscillator();
+        filterLFO.type = 'sine';
+        filterLFO.frequency.value = 1 / 15;
+        const filterScale = ctx.createGain();
+        filterScale.gain.value = 1400;
+        filterLFO.connect(filterScale);
+        filterScale.connect(filter.frequency);
+        filter.frequency.value = 1600;
+        filterLFO.start(now);
+        activeNodes.push(filterLFO, filterScale);
         
         const panner = ctx.createStereoPanner();
         const lfo = ctx.createOscillator();
         lfo.frequency.value = 0.5; 
         lfo.connect(panner.pan);
         lfo.start(now);
-        lfo.stop(now + durationSeconds);
         activeNodes.push(lfo, panner, filter, shaper);
 
         const osc = ctx.createOscillator();
@@ -839,14 +876,147 @@ export function useAudioEngine(options?: EngineOptions) {
         panner.connect(washMasterGain);
         
         osc.start(now);
-        osc.stop(now + durationSeconds);
         activeNodes.push(osc, oscGain);
         
-    } else if (type === 'ascender') {
-        washMasterGain.gain.exponentialRampToValueAtTime(1.0, now + 2);
-        washMasterGain.gain.setValueAtTime(1.0, now + durationSeconds - 5);
-        washMasterGain.gain.linearRampToValueAtTime(0.0001, now + durationSeconds);
+    } else if (type === 'glitch') {
+        const panner = ctx.createStereoPanner();
+        const panLFO = ctx.createOscillator();
+        panLFO.type = 'sine';
+        panLFO.frequency.value = 1.5; // Swirl
+        panLFO.connect(panner.pan);
+        panLFO.start(now);
+        
+        const delay = ctx.createDelay();
+        delay.delayTime.value = 0.125; // 1/8th echo
+        const delayFeedback = ctx.createGain();
+        delayFeedback.gain.value = 0.6; // High feedback for trippy echo
+        delay.connect(delayFeedback);
+        delayFeedback.connect(delay);
+        delay.connect(panner);
 
+        const coreOsc = ctx.createOscillator();
+        coreOsc.type = 'sine';
+        coreOsc.frequency.value = 528;
+        
+        const fastLFO = ctx.createOscillator();
+        fastLFO.type = 'square';
+        fastLFO.frequency.value = 16;
+        const fastGain = ctx.createGain();
+        fastGain.gain.value = 0; 
+        fastLFO.connect(fastGain.gain);
+        
+        const slowLFO = ctx.createOscillator();
+        slowLFO.type = 'square';
+        slowLFO.frequency.value = 4;
+        const slowGain = ctx.createGain();
+        slowGain.gain.value = 0;
+        slowLFO.connect(slowGain.gain);
+        
+        const oscOutGain = ctx.createGain();
+        oscOutGain.gain.value = 0.8;
+        
+        coreOsc.connect(fastGain);
+        fastGain.connect(slowGain);
+        slowGain.connect(oscOutGain);
+        
+        oscOutGain.connect(panner);
+        oscOutGain.connect(delay);
+        panner.connect(washMasterGain);
+        
+        coreOsc.start(now);
+        fastLFO.start(now);
+        slowLFO.start(now);
+        
+        const blipOsc = ctx.createOscillator();
+        blipOsc.type = 'triangle';
+        blipOsc.frequency.value = 852;
+        
+        const blipLFO = ctx.createOscillator();
+        blipLFO.type = 'square';
+        blipLFO.frequency.value = 2; 
+        const blipGain = ctx.createGain();
+        blipGain.gain.value = 0;
+        blipLFO.connect(blipGain.gain);
+        
+        const blipOut = ctx.createGain();
+        blipOut.gain.value = 0.15;
+        blipOsc.connect(blipGain);
+        blipGain.connect(blipOut);
+        blipOut.connect(delay); 
+        
+        blipOsc.start(now);
+        blipLFO.start(now);
+
+        activeNodes.push(panner, panLFO, delay, delayFeedback, coreOsc, fastLFO, fastGain, slowLFO, slowGain, oscOutGain, blipOsc, blipLFO, blipGain, blipOut);
+        
+    } else if (type === 'cyber') {
+        const coreOsc = ctx.createOscillator();
+        coreOsc.type = 'sawtooth';
+        coreOsc.frequency.value = startFreq || 852; 
+        
+        const coreFilter = ctx.createBiquadFilter();
+        coreFilter.type = 'lowpass';
+        coreFilter.frequency.value = 1200; 
+        coreFilter.Q.value = 2.0;
+        
+        const coreLFO = ctx.createOscillator();
+        coreLFO.type = 'square';
+        coreLFO.frequency.value = 4;
+        
+        const coreGain = ctx.createGain();
+        coreGain.gain.value = 0; 
+        
+        coreLFO.connect(coreGain.gain);
+        coreOsc.connect(coreFilter);
+        coreFilter.connect(coreGain);
+        
+        const outGain = ctx.createGain();
+        outGain.gain.value = 0.4; 
+        coreGain.connect(outGain);
+        outGain.connect(washMasterGain);
+        
+        coreOsc.start(now);
+        coreLFO.start(now);
+        activeNodes.push(coreOsc, coreFilter, coreLFO, coreGain, outGain);
+
+        const twinkleFreqs = [3000, 4500, 6000];
+        const twinkleLFOFreqs = [3.1, 5.3, 7.9];
+        
+        const twinklePanner = ctx.createStereoPanner();
+        const panLFO = ctx.createOscillator();
+        panLFO.type = 'sine';
+        panLFO.frequency.value = 2.3; 
+        panLFO.connect(twinklePanner.pan);
+        panLFO.start(now);
+        twinklePanner.connect(washMasterGain);
+        activeNodes.push(twinklePanner, panLFO);
+        
+        twinkleFreqs.forEach((freq, i) => {
+            const tOsc = ctx.createOscillator();
+            tOsc.type = 'sine';
+            tOsc.frequency.value = freq;
+            
+            const tLFO = ctx.createOscillator();
+            tLFO.type = 'sine';
+            tLFO.frequency.value = twinkleLFOFreqs[i];
+            
+            const tGain = ctx.createGain();
+            tGain.gain.value = 0.5; 
+            
+            const lfoScale = ctx.createGain();
+            lfoScale.gain.value = 0.5;
+            tLFO.connect(lfoScale);
+            lfoScale.connect(tGain.gain);
+            
+            tOsc.connect(tGain);
+            tGain.connect(twinklePanner);
+            
+            tOsc.start(now);
+            tLFO.start(now);
+            activeNodes.push(tOsc, tLFO, lfoScale, tGain);
+        });
+
+    } else if (type === 'ascender') {
         const numOscs = 6;
         const baseFreq = startFreq / 2;
         
@@ -855,52 +1025,45 @@ export function useAudioEngine(options?: EngineOptions) {
             osc.type = 'sine';
             const gain = ctx.createGain();
             
-            const startPitch = baseFreq * Math.pow(1.25, i * 2);
-            const endPitch = startPitch * 4; 
+            const freqLFO = ctx.createOscillator();
+            freqLFO.type = 'sawtooth';
+            freqLFO.frequency.value = 1 / 30;
             
-            osc.frequency.setValueAtTime(startPitch, now);
-            osc.frequency.exponentialRampToValueAtTime(endPitch, now + durationSeconds);
+            const startPitch = baseFreq * Math.pow(2, i);
             
-            gain.gain.setValueAtTime(0.0001, now);
-            gain.gain.exponentialRampToValueAtTime(0.2, now + durationSeconds / 2);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSeconds);
+            const freqScale = ctx.createGain();
+            freqScale.gain.value = startPitch;
+            
+            freqLFO.connect(freqScale);
+            freqScale.connect(osc.frequency);
+            osc.frequency.value = startPitch * 1.5;
+            
+            const amLFO = ctx.createOscillator();
+            amLFO.type = 'sine';
+            amLFO.frequency.value = 1 / 30;
+            
+            const amGain = ctx.createGain();
+            amGain.gain.value = 0.5;
+            
+            amLFO.connect(amGain);
+            amGain.connect(gain.gain);
+            gain.gain.value = 0.5;
             
             osc.connect(gain);
             gain.connect(washMasterGain);
+            
             osc.start(now);
-            osc.stop(now + durationSeconds);
-            activeNodes.push(osc, gain);
+            freqLFO.start(now);
+            amLFO.start(now);
+            activeNodes.push(osc, gain, freqLFO, freqScale, amLFO, amGain);
         }
     }
 
-    setTimeout(() => {
-        setActiveWashTypes(prev => prev.filter(t => t !== type));
-        activeWashesRef.current = activeWashesRef.current.filter(w => w.id !== washId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    activeWashesRef.current.push({ id: washId, type, startOffset: now, startFreq, duration: 0, nodes: activeNodes as AudioNode[], washMasterGain });
 
-        activeNodes.forEach(node => {
-            try { node.disconnect(); } catch { /* ignore */ }
-        });
-        washMasterGain.disconnect();
-        
-        if (activeWashesRef.current.length === 0) {
-            Object.keys(channelGainsRef.current).forEach(key => {
-                const gainNode = channelGainsRef.current[key];
-                const currentVol = channelVolumesRef.current[key] || 0;
-                if (currentVol > 0.0001) {
-                    gainNode.gain.cancelScheduledValues(ctx.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(currentVol, ctx.currentTime + 3.0);
-                }
-            });
-
-            if (wasSuspended) {
-                ctx.suspend();
-                setIsPlaying(false);
-                masterGainRef.current?.gain.setValueAtTime(0, ctx.currentTime);
-            }
-        }
-    }, (durationSeconds + 1) * 1000);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initEngine]);
 
-  return { isPlaying, activeWashTypes, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };
+  return { isPlaying, activeWashTypes, getActiveWashData, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, toggleWash };
 }
