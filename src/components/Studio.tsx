@@ -122,8 +122,8 @@ const WashHUDItem = ({ type, getActiveWashData }: { type: string, getActiveWashD
         return () => cancelAnimationFrame(animationFrameId);
     }, [type, getActiveWashData]);
 
-    const title = type === 'euphoric' ? 'Euphoric Wash' : type === 'flashbang' ? 'Somatic Flashbang' : type === 'liquid' ? 'Liquid Fold' : type === 'glitch' ? 'Neuro-Glitch' : type === 'cyber' ? 'Cyber Twinkle' : type === 'bereginya' ? 'Bereginya Wash' : type === 'astral' ? 'Astral Swirl' : type === 'audirall' ? 'Audi-rall 40mg' : 'Infinite Ascender';
-    const accent = type === 'euphoric' ? '#00F0FF' : type === 'flashbang' ? '#FF0080' : type === 'liquid' ? '#00FF88' : type === 'glitch' ? '#B500FF' : type === 'cyber' ? '#00FFFF' : type === 'bereginya' ? '#00E5FF' : type === 'astral' ? '#FF00FF' : type === 'audirall' ? '#00FF00' : '#FFD700';
+    const title = type === 'euphoric' ? 'Euphoric Wash' : type === 'flashbang' ? 'Somatic Flashbang' : type === 'liquid' ? 'Liquid Fold' : type === 'glitch' ? 'Neuro-Glitch' : type === 'cyber' ? 'Cyber Twinkle' : type === 'bereginya' ? 'Bereginya Wash' : type === 'astral' ? 'Astral Swirl' : type === 'audirall' ? 'Audi-rall 40mg' : type === 'ascender' ? 'Infinite Ascender' : type === 'descender' ? 'Infinite Descender' : type === 'tibetan' ? 'Tibetan Drone' : type === 'nervetap' ? 'Nerve Tapper' : 'Unknown';
+    const accent = type === 'euphoric' ? '#00F0FF' : type === 'flashbang' ? '#FF0080' : type === 'liquid' ? '#00FF88' : type === 'glitch' ? '#B500FF' : type === 'cyber' ? '#00FFFF' : type === 'bereginya' ? '#00E5FF' : type === 'astral' ? '#FF00FF' : type === 'audirall' ? '#00FF00' : type === 'ascender' ? '#FFD700' : type === 'descender' ? '#4488FF' : type === 'tibetan' ? '#FF6600' : type === 'nervetap' ? '#FF3366' : '#FFFFFF';
 
     return (
         <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(0,10,15,0.8)', border: `1px solid ${accent}40`, borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '0.8rem', opacity: isVisible ? 1 : 0, transform: isVisible ? 'translateY(0)' : 'translateY(10px)', transition: 'all 0.3s ease', boxShadow: `0 0 20px ${accent}20, inset 0 0 10px ${accent}10` }}>
@@ -627,6 +627,27 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
                 onClick={() => toggleWash(customBase, 'ascender')}
               >
                 {activeWashTypes.includes('ascender') ? '■ STOP ASCENDER' : 'Infinite Ascender'}
+              </button>
+              <button
+                className="cta-button"
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('descender') ? 'rgba(68, 136, 255, 0.1)' : 'linear-gradient(90deg, #4488FF, #0044CC)', border: activeWashTypes.includes('descender') ? '1px solid rgba(68, 136, 255, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('descender') ? '#4488FF' : 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('descender') ? '0 0 20px rgba(68,136,255,0.4), inset 0 0 10px rgba(68,136,255,0.2)' : 'none' }}
+                onClick={() => toggleWash(customBase, 'descender')}
+              >
+                {activeWashTypes.includes('descender') ? '■ STOP DESCENDER' : 'Infinite Descender'}
+              </button>
+              <button
+                className="cta-button"
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('tibetan') ? 'rgba(255, 102, 0, 0.1)' : 'linear-gradient(90deg, #FF6600, #CC3300)', border: activeWashTypes.includes('tibetan') ? '1px solid rgba(255, 102, 0, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('tibetan') ? '#FF6600' : 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('tibetan') ? '0 0 20px rgba(255,102,0,0.4), inset 0 0 10px rgba(255,102,0,0.2)' : 'none' }}
+                onClick={() => toggleWash(136, 'tibetan')}
+              >
+                {activeWashTypes.includes('tibetan') ? '■ STOP TIBETAN' : 'Tibetan Drone'}
+              </button>
+              <button
+                className="cta-button"
+                style={{ padding: '0.75rem', background: activeWashTypes.includes('nervetap') ? 'rgba(255, 51, 102, 0.1)' : 'linear-gradient(90deg, #FF3366, #CC0044)', border: activeWashTypes.includes('nervetap') ? '1px solid rgba(255, 51, 102, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('nervetap') ? '#FF3366' : 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('nervetap') ? '0 0 20px rgba(255,51,102,0.4), inset 0 0 10px rgba(255,51,102,0.2)' : 'none' }}
+                onClick={() => toggleWash(customBase, 'nervetap')}
+              >
+                {activeWashTypes.includes('nervetap') ? '■ STOP NERVE TAP' : 'Nerve Tapper'}
               </button>
             </div>
             

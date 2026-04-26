@@ -639,6 +639,17 @@ export function useAudioEngine(options?: EngineOptions) {
              const cycle = (elapsed % 30) / 30;
              const currentPitch = baseFreq * Math.pow(4, cycle);
              displayHz = `${Math.round(currentPitch)} Hz Rising`;
+         } else if (type === 'descender') {
+             const baseFreq = startFreq / 2;
+             const cycle = 1 - ((elapsed % 30) / 30);
+             const currentPitch = baseFreq * Math.pow(4, cycle);
+             displayHz = `${Math.round(currentPitch)} Hz Falling`;
+         } else if (type === 'tibetan') {
+             const beat = Math.round(2 + Math.sin(elapsed * 0.3) * 1.5);
+             displayHz = `[${startFreq || 136}Hz] ${beat}Hz Beat`;
+         } else if (type === 'nervetap') {
+             const side = Math.sin(elapsed * Math.PI * 2 * 2) > 0 ? 'R' : 'L';
+             displayHz = `[BILATERAL] TAP-${side}`;
          }
          
          currentWashes.push({ id, type, elapsed, displayHz });
@@ -647,7 +658,7 @@ export function useAudioEngine(options?: EngineOptions) {
      return currentWashes;
   }, []);
 
-  const toggleWash = useCallback(async (startFreq: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' | 'glitch' | 'cyber' | 'bereginya' | 'astral' | 'audirall' = 'euphoric') => {
+  const toggleWash = useCallback(async (startFreq: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' | 'glitch' | 'cyber' | 'bereginya' | 'astral' | 'audirall' | 'descender' | 'tibetan' | 'nervetap' = 'euphoric') => {
     if (!options?.isPremium && playbackTimeRef.current >= CUTOFF_SECONDS) {
       if (options?.onCutoff) options.onCutoff();
       return;
@@ -1315,6 +1326,171 @@ export function useAudioEngine(options?: EngineOptions) {
             amLFO.start(now);
             activeNodes.push(osc, gain, freqLFO, freqScale, amLFO, amGain);
         }
+
+    } else if (type === 'descender') {
+        // Infinite Descender - Shepard Tone falling forever
+        const numOscs = 6;
+        const baseFreq = startFreq / 2;
+        
+        for (let i = 0; i < numOscs; i++) {
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            const gain = ctx.createGain();
+            
+            // Inverse sawtooth for descending
+            const freqLFO = ctx.createOscillator();
+            freqLFO.type = 'sawtooth';
+            freqLFO.frequency.value = 1 / 30;
+            
+            const startPitch = baseFreq * Math.pow(2, i);
+            
+            const freqScale = ctx.createGain();
+            freqScale.gain.value = -startPitch; // Negative = descending
+            
+            freqLFO.connect(freqScale);
+            freqScale.connect(osc.frequency);
+            osc.frequency.value = startPitch * 1.5;
+            
+            const amLFO = ctx.createOscillator();
+            amLFO.type = 'sine';
+            amLFO.frequency.value = 1 / 30;
+            
+            const amGain = ctx.createGain();
+            amGain.gain.value = 0.5;
+            
+            amLFO.connect(amGain);
+            amGain.connect(gain.gain);
+            gain.gain.value = 0.5;
+            
+            osc.connect(gain);
+            gain.connect(washMasterGain);
+            
+            osc.start(now);
+            freqLFO.start(now);
+            amLFO.start(now);
+            activeNodes.push(osc, gain, freqLFO, freqScale, amLFO, amGain);
+        }
+
+    } else if (type === 'tibetan') {
+        // Tibetan Singing Bowl Drone - detuned sines with slow beating
+        const bowlFreq = startFreq || 136; // Om frequency
+        const partials = [1, 2.71, 4.16, 5.43, 6.58]; // Bowl harmonic ratios
+        
+        partials.forEach((partial, idx) => {
+            const freq = bowlFreq * partial;
+            
+            // Main tone
+            const osc1 = ctx.createOscillator();
+            osc1.type = 'sine';
+            osc1.frequency.value = freq;
+            
+            // Slightly detuned partner (creates beating)
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.value = freq + (0.5 + idx * 0.3); // Slow beat
+            
+            // AM modulation for shimmer
+            const shimmerLFO = ctx.createOscillator();
+            shimmerLFO.type = 'sine';
+            shimmerLFO.frequency.value = 0.1 + idx * 0.05;
+            const shimmerGain = ctx.createGain();
+            shimmerGain.gain.value = 0.3;
+            shimmerLFO.connect(shimmerGain);
+            
+            const partialGain = ctx.createGain();
+            const amplitude = 0.25 / (idx + 1); // Higher partials quieter
+            partialGain.gain.value = amplitude;
+            shimmerGain.connect(partialGain.gain);
+            
+            osc1.connect(partialGain);
+            osc2.connect(partialGain);
+            partialGain.connect(washMasterGain);
+            
+            osc1.start(now);
+            osc2.start(now);
+            shimmerLFO.start(now);
+            activeNodes.push(osc1, osc2, shimmerLFO, shimmerGain, partialGain);
+        });
+        
+        // Sub-harmonic drone
+        const subOsc = ctx.createOscillator();
+        subOsc.type = 'sine';
+        subOsc.frequency.value = bowlFreq / 2;
+        const subGain = ctx.createGain();
+        subGain.gain.value = 0.15;
+        subOsc.connect(subGain);
+        subGain.connect(washMasterGain);
+        subOsc.start(now);
+        activeNodes.push(subOsc, subGain);
+
+    } else if (type === 'nervetap') {
+        // Nerve Tapper - Bilateral stimulation (EMDR-inspired)
+        const tapRate = 2; // taps per second per side
+        
+        // Left channel click
+        const leftOsc = ctx.createOscillator();
+        leftOsc.type = 'sine';
+        leftOsc.frequency.value = 800;
+        const leftPan = ctx.createStereoPanner();
+        leftPan.pan.value = -1;
+        const leftGate = ctx.createGain();
+        leftGate.gain.value = 0;
+        
+        const leftLFO = ctx.createOscillator();
+        leftLFO.type = 'square';
+        leftLFO.frequency.value = tapRate;
+        const leftDepth = ctx.createGain();
+        leftDepth.gain.value = 0.4;
+        leftLFO.connect(leftDepth);
+        leftDepth.connect(leftGate.gain);
+        
+        leftOsc.connect(leftGate);
+        leftGate.connect(leftPan);
+        leftPan.connect(washMasterGain);
+        
+        // Right channel click (phase offset via cosine-like trick)
+        const rightOsc = ctx.createOscillator();
+        rightOsc.type = 'sine';
+        rightOsc.frequency.value = 820; // Slight detune for depth
+        const rightPan = ctx.createStereoPanner();
+        rightPan.pan.value = 1;
+        const rightGate = ctx.createGain();
+        rightGate.gain.value = 0;
+        
+        const rightLFO = ctx.createOscillator();
+        rightLFO.type = 'square';
+        rightLFO.frequency.value = tapRate;
+        const rightDepth = ctx.createGain();
+        rightDepth.gain.value = 0.4;
+        rightLFO.connect(rightDepth);
+        rightDepth.connect(rightGate.gain);
+        
+        rightOsc.connect(rightGate);
+        rightGate.connect(rightPan);
+        rightPan.connect(washMasterGain);
+        
+        // Start right LFO half a cycle late for alternation
+        leftOsc.start(now);
+        leftLFO.start(now);
+        rightOsc.start(now);
+        rightLFO.start(now + (1 / tapRate / 2)); // Half-cycle offset
+        
+        // Soft ambient pad underneath
+        const padOsc = ctx.createOscillator();
+        padOsc.type = 'sine';
+        padOsc.frequency.value = 396; // Release frequency
+        const padOsc2 = ctx.createOscillator();
+        padOsc2.type = 'sine';
+        padOsc2.frequency.value = 398; // Beating
+        const padGain = ctx.createGain();
+        padGain.gain.value = 0.08;
+        padOsc.connect(padGain);
+        padOsc2.connect(padGain);
+        padGain.connect(washMasterGain);
+        padOsc.start(now);
+        padOsc2.start(now);
+        
+        activeNodes.push(leftOsc, leftPan, leftGate, leftLFO, leftDepth, rightOsc, rightPan, rightGate, rightLFO, rightDepth, padOsc, padOsc2, padGain);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
