@@ -131,6 +131,12 @@ function App() {
           {session ? (
             <>
               <button 
+                style={{ background: 'none', border: 'none', color: stage === 'studio' ? 'var(--brand-cyan)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: stage === 'studio' ? 'bold' : 'normal' }}
+                onClick={() => navigate('studio')}
+              >
+                Studio
+              </button>
+              <button 
                 style={{ background: 'none', border: 'none', color: stage === 'dashboard' ? 'var(--brand-cyan)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: stage === 'dashboard' ? 'bold' : 'normal' }}
                 onClick={() => navigate('dashboard')}
               >
