@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import './OnboardingModal.css';
 import { Settings2 } from 'lucide-react';
 
@@ -8,15 +8,7 @@ interface OnboardingModalProps {
 }
 
 export default function OnboardingModal({ onInitiate, onSkip }: OnboardingModalProps) {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    // Check if the user has already seen the modal
-    const hasSeenModal = localStorage.getItem('kinetic_onboarding_complete');
-    if (!hasSeenModal) {
-      setIsVisible(true);
-    }
-  }, []);
+  const [isVisible, setIsVisible] = useState(() => !localStorage.getItem('kinetic_onboarding_complete'));
 
   const handleInitiate = () => {
     localStorage.setItem('kinetic_onboarding_complete', 'true');

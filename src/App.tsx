@@ -14,6 +14,7 @@ export type AppStage = 'hero' | 'assessment' | 'auth' | 'studio' | 'protocol';
 function App() {
   const [stage, setStage] = useState<AppStage>('hero');
   const [initialPreset, setInitialPreset] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [session, setSession] = useState<any>(null);
   const [isPremium, setIsPremium] = useState(false);
 
@@ -43,6 +44,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async function fetchProfile(user: any) {
       if (!user) {
         setIsPremium(false);

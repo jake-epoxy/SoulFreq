@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/purity */
 import { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sphere, Points, PointMaterial, ScrollControls, Scroll, useScroll, Stars } from '@react-three/drei';

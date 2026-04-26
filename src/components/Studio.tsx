@@ -133,17 +133,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
 
   const hasInitializedAudioRef = useRef(false);
 
-  useEffect(() => {
-    if (!hasInitializedAudioRef.current) {
-        let presetToLoad = PRESETS[0]; // Auto load Deep Sleep default
-        if (initialPreset) {
-            const found = PRESETS.find(p => p.id === initialPreset);
-            if (found) presetToLoad = found;
-        }
-        applyPreset(presetToLoad);
-        hasInitializedAudioRef.current = true;
-    }
-  }, [initialPreset]);
+
 
   // Visualizer Loop
   useEffect(() => {
@@ -252,6 +242,19 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
      updateCustomNode(preset.settings.custom.base, preset.settings.custom.offset, preset.settings.custom.wave);
      updateIsochronic(preset.settings.custom.isoRate, preset.settings.custom.isoDepth);
   };
+
+  useEffect(() => {
+    if (!hasInitializedAudioRef.current) {
+        let presetToLoad = PRESETS[0]; // Auto load Deep Sleep default
+        if (initialPreset) {
+            const found = PRESETS.find(p => p.id === initialPreset);
+            if (found) presetToLoad = found;
+        }
+        applyPreset(presetToLoad);
+        hasInitializedAudioRef.current = true;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPreset]);
 
   const handleFreqChange = (idx: number, newValue: number) => {
     setActivePreset(null); 

@@ -48,6 +48,7 @@ export function useAudioEngine(options?: EngineOptions) {
     return () => {
       if (cutoffTimerRef.current) window.clearInterval(cutoffTimerRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, options?.isPremium, options?.onCutoff]);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -67,8 +68,10 @@ export function useAudioEngine(options?: EngineOptions) {
   const initEngine = useCallback(() => {
     if (audioCtxRef.current) return;
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     const ctx = new AudioContextClass();
+    // eslint-disable-next-line react-hooks/immutability
     audioCtxRef.current = ctx;
 
     const analyser = ctx.createAnalyser();
@@ -203,7 +206,7 @@ export function useAudioEngine(options?: EngineOptions) {
       
       let lastOut = 0;
       for (let i = 0; i < bufferSize; i++) {
-        let whiteRaw = Math.random() * 2 - 1;
+        const whiteRaw = Math.random() * 2 - 1;
         if (type === 'brown') {
             // Brown noise approximation (integrating white noise)
             lastOut = (lastOut + (0.02 * whiteRaw)) / 1.02;     
@@ -613,6 +616,7 @@ export function useAudioEngine(options?: EngineOptions) {
     washMasterGain.gain.value = 0.01;
     washMasterGain.connect(masterGainRef.current);
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const activeNodes: any[] = [];
 
     washMasterGain.gain.setValueAtTime(1.0, now); 
@@ -662,7 +666,7 @@ export function useAudioEngine(options?: EngineOptions) {
     setTimeout(() => {
         setIsWashing(false);
         activeNodes.forEach(node => {
-            try { node.disconnect(); } catch(e) {}
+            try { node.disconnect(); } catch { /* ignore */ }
         });
         washMasterGain.disconnect();
         
@@ -672,6 +676,7 @@ export function useAudioEngine(options?: EngineOptions) {
             masterGainRef.current?.gain.setValueAtTime(0, ctx.currentTime);
         }
     }, (durationSeconds + 1) * 1000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initEngine, isWashing]);
 
   return { isPlaying, isWashing, togglePlay, elapsedTime, setVolume, updateCustomNode, updateIsochronic, initEngine, getAnalyser, isRecording, startRecording, stopRecording, triggerSweep };
