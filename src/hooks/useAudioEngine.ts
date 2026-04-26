@@ -602,6 +602,8 @@ export function useAudioEngine(options?: EngineOptions) {
              displayHz = `[432+963Hz] MATRIX-ACTV`;
          } else if (type === 'astral') {
              displayHz = `[${startFreq || 528}Hz] VOID-SWIRL`;
+         } else if (type === 'audirall') {
+             displayHz = `[40Hz GAMMA] AUDI-RALL`;
          } else if (type === 'ascender') {
              const baseFreq = startFreq / 2;
              const cycle = (elapsed % 30) / 30;
@@ -615,7 +617,7 @@ export function useAudioEngine(options?: EngineOptions) {
      return currentWashes;
   }, []);
 
-  const toggleWash = useCallback(async (startFreq: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' | 'glitch' | 'cyber' | 'bereginya' | 'astral' = 'euphoric') => {
+  const toggleWash = useCallback(async (startFreq: number, type: 'euphoric' | 'flashbang' | 'liquid' | 'ascender' | 'glitch' | 'cyber' | 'bereginya' | 'astral' | 'audirall' = 'euphoric') => {
     if (!options?.isPremium && playbackTimeRef.current >= CUTOFF_SECONDS) {
       if (options?.onCutoff) options.onCutoff();
       return;
@@ -1160,6 +1162,87 @@ export function useAudioEngine(options?: EngineOptions) {
         filterLFO.start(now);
         panLFO.start(now);
         activeNodes.push(baseOsc, fmOsc, fmGain, filter, filterLFO, filterGain, panner, panLFO, delay, feedback, outGain);
+
+    } else if (type === 'audirall') {
+        // Brown Noise Generator
+        const bufferSize = ctx.sampleRate * 2; // 2 seconds of noise
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let lastOut = 0;
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            output[i] = (lastOut + (0.02 * white)) / 1.02;
+            lastOut = output[i];
+            output[i] *= 3.5; // Compensate for gain
+        }
+        
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        noise.loop = true;
+        
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = 'lowpass';
+        noiseFilter.frequency.value = 400; // Deep rumble
+        
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.value = 0.8;
+        
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(washMasterGain);
+        noise.start(now);
+        activeNodes.push(noise, noiseFilter, noiseGain);
+
+        // 40Hz Gamma Binaural Beats
+        const leftOsc = ctx.createOscillator();
+        leftOsc.type = 'sine';
+        leftOsc.frequency.value = 200; // Base carrier
+        const leftPan = ctx.createStereoPanner();
+        leftPan.pan.value = -1;
+        
+        const rightOsc = ctx.createOscillator();
+        rightOsc.type = 'sine';
+        rightOsc.frequency.value = 240; // 40Hz offset
+        const rightPan = ctx.createStereoPanner();
+        rightPan.pan.value = 1;
+        
+        const binauralGain = ctx.createGain();
+        binauralGain.gain.value = 0.4;
+        
+        leftOsc.connect(leftPan);
+        rightOsc.connect(rightPan);
+        leftPan.connect(binauralGain);
+        rightPan.connect(binauralGain);
+        binauralGain.connect(washMasterGain);
+        
+        leftOsc.start(now);
+        rightOsc.start(now);
+        activeNodes.push(leftOsc, leftPan, rightOsc, rightPan, binauralGain);
+
+        // Isochronic Metronome (14Hz Beta)
+        const pulseOsc = ctx.createOscillator();
+        pulseOsc.type = 'triangle';
+        pulseOsc.frequency.value = 400;
+        
+        const pulseGain = ctx.createGain();
+        pulseGain.gain.value = 0;
+        
+        const pulseLFO = ctx.createOscillator();
+        pulseLFO.type = 'square';
+        pulseLFO.frequency.value = 14; // 14 Hz rhythmic pulse
+        
+        const pulseDepth = ctx.createGain();
+        pulseDepth.gain.value = 0.15;
+        
+        pulseLFO.connect(pulseDepth);
+        pulseDepth.connect(pulseGain.gain);
+        
+        pulseOsc.connect(pulseGain);
+        pulseGain.connect(washMasterGain);
+        
+        pulseOsc.start(now);
+        pulseLFO.start(now);
+        activeNodes.push(pulseOsc, pulseGain, pulseLFO, pulseDepth);
 
     } else if (type === 'ascender') {
         const numOscs = 6;
