@@ -1060,22 +1060,48 @@ export function useAudioEngine(options?: EngineOptions) {
         subOsc.start(now);
         activeNodes.push(subOsc, subGain);
 
-        // Build the Harmonic Stack
-        const allFreqs = [...baseFreqs, ...harmonics];
-        allFreqs.forEach((freq, index) => {
+        // The Base Drone (Continuous)
+        baseFreqs.forEach((freq) => {
             const osc = ctx.createOscillator();
             osc.type = 'sine';
             osc.frequency.value = freq;
             
             const gain = ctx.createGain();
-            // Lower frequencies have more gain, higher are just harmonics
-            gain.gain.value = index < 2 ? 0.3 : 0.1;
+            gain.gain.value = 0.3;
+            
+            osc.connect(gain);
+            gain.connect(snapFilter);
+            osc.start(now);
+            activeNodes.push(osc, gain);
+        });
+
+        // The Data Stream Sequencer (Beep Boops)
+        const chopRates = [8, 4, 2]; // Square LFO speeds for each harmonic
+        harmonics.forEach((freq, index) => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            
+            const gain = ctx.createGain();
+            gain.gain.value = 0; // Modulated by LFO
+            
+            // Square wave LFO to chop the gain (creating distinct beeps)
+            const gateLFO = ctx.createOscillator();
+            gateLFO.type = 'square';
+            gateLFO.frequency.value = chopRates[index];
+            
+            const gateDepth = ctx.createGain();
+            gateDepth.gain.value = 0.15; // Volume of the beeps
+            
+            gateLFO.connect(gateDepth);
+            gateDepth.connect(gain.gain);
             
             osc.connect(gain);
             gain.connect(snapFilter);
             
             osc.start(now);
-            activeNodes.push(osc, gain);
+            gateLFO.start(now);
+            activeNodes.push(osc, gain, gateLFO, gateDepth);
         });
 
     } else if (type === 'ascender') {
