@@ -72,7 +72,7 @@ function App() {
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-      const isUserPremium = await fetchProfile(session?.user);
+      await fetchProfile(session?.user);
       
       const urlParams = new URLSearchParams(window.location.search);
       // Auto-bypass the funnel for logged-in users on refresh
