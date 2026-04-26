@@ -31,7 +31,15 @@
 
 @media (max-width: 768px) {
   .journeys-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 1rem;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .journeys-grid::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -46,6 +54,14 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.05);
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .journey-card {
+    min-width: 85vw;
+    scroll-snap-align: center;
+    flex: 0 0 auto;
+  }
 }
 
 .journey-card::before {
@@ -134,7 +150,36 @@
 
 @media (max-width: 968px) {
   .studio-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-order-1 { order: 1; margin-bottom: 2rem; }
+  .panel-order-2 { order: 2; margin-bottom: 2rem; }
+  .panel-order-3 { order: 3; }
+}
+
+.horizontal-scroll-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .horizontal-scroll-row {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 1rem;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .horizontal-scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+  .horizontal-scroll-row > .cta-button {
+    min-width: 200px;
+    scroll-snap-align: center;
+    flex: 0 0 auto;
   }
 }
 

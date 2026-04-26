@@ -420,7 +420,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
 
       <div className="studio-grid" style={{ marginTop: '3rem' }}>
         {/* Frequencies Panel */}
-        <motion.div className="panel glass-panel">
+        <motion.div className="panel glass-panel panel-order-2">
           <div className="panel-header">
             <Sliders size={20} className="panel-icon cyan-icon" />
             <h3>Presets</h3>
@@ -449,7 +449,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         </motion.div>
 
         {/* Center Console */}
-        <motion.div className="panel glass-panel center-console" style={{ position: 'relative' }}>
+        <motion.div className="panel glass-panel center-console panel-order-1" style={{ position: 'relative' }}>
           
           <button 
             className={`record-action-button ${isRecording ? 'recording' : ''}`} 
@@ -475,7 +475,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         </motion.div>
 
         {/* Synthesized Ambients Panel */}
-        <motion.div className="panel glass-panel">
+        <motion.div className="panel glass-panel panel-order-3">
           <div className="panel-header">
             <Waves size={20} className="panel-icon purple-icon" />
             <h3>Procedural Textures</h3>
@@ -523,7 +523,7 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
               <Zap size={18} />
               Kinetic Washes (Scroll Stoppers)
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div className="horizontal-scroll-row">
               <button 
                 className="cta-button"
                 style={{ padding: '0.75rem', background: activeWashTypes.includes('euphoric') ? 'rgba(0, 240, 255, 0.1)' : 'linear-gradient(90deg, #00F0FF, #0088FF)', border: activeWashTypes.includes('euphoric') ? '1px solid rgba(0, 240, 255, 0.3)' : 'none', borderRadius: '8px', color: activeWashTypes.includes('euphoric') ? '#00F0FF' : 'black', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.3s ease', boxShadow: activeWashTypes.includes('euphoric') ? '0 0 20px rgba(0,240,255,0.4), inset 0 0 10px rgba(0,240,255,0.2)' : 'none' }}
