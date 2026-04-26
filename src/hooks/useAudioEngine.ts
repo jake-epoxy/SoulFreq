@@ -10,6 +10,10 @@ export interface EngineOptions {
 
 export function useAudioEngine(options?: EngineOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const isPlayingRef = useRef(false);
+  
+  // Keep ref in sync with state
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
   
   // Initialize timer from localStorage
   const initialTime = typeof window !== 'undefined' ? parseInt(localStorage.getItem('kinesus_free_trial_time') || '0', 10) : 0;
@@ -700,23 +704,28 @@ export function useAudioEngine(options?: EngineOptions) {
         wash.washMasterGain?.gain.linearRampToValueAtTime(0.0001, now + 2);
         
         setTimeout(() => {
-            wash.nodes?.forEach((node: AudioNode) => { try { node.disconnect(); } catch { /* ignore */ } });
+            wash.nodes?.forEach((node: AudioNode) => { 
+              try { 
+                // Stop oscillators/sources properly, not just disconnect
+                if (node instanceof OscillatorNode || node instanceof AudioBufferSourceNode) {
+                  node.stop();
+                }
+                node.disconnect(); 
+              } catch { /* ignore */ } 
+            });
             try { wash.washMasterGain?.disconnect(); } catch { /* ignore */ }
         }, 2100);
 
         activeWashesRef.current.splice(existingWashIndex, 1);
         setActiveWashTypes(prev => prev.filter(t => t !== type));
 
-        // If that was the last active wash, restore all studio channel volumes
-        if (activeWashesRef.current.length === 0) {
-            Object.keys(channelGainsRef.current).forEach(key => {
-                const gainNode = channelGainsRef.current[key];
-                const savedVol = channelVolumesRef.current[key] || 0;
-                if (savedVol > 0.0001) {
-                    gainNode.gain.cancelScheduledValues(now);
-                    gainNode.gain.linearRampToValueAtTime(savedVol, now + 1.0);
-                }
-            });
+        // If that was the last active wash and studio isn't playing, suspend context
+        if (activeWashesRef.current.length === 0 && !isPlaying) {
+            setTimeout(async () => {
+              if (audioCtxRef.current && activeWashesRef.current.length === 0 && !isPlayingRef.current) {
+                await audioCtxRef.current.suspend();
+              }
+            }, 2200);
         }
         return;
     }
