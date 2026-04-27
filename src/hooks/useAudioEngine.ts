@@ -126,24 +126,36 @@ export function useAudioEngine(options?: EngineOptions) {
     compressor.connect(destNode);
     
     try {
-      const mediaRecorder = new MediaRecorder(destNode.stream, { mimeType: 'audio/webm' });
+      // Find a supported MIME type
+      const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+      let selectedMime = '';
+      for (const mime of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mime)) { selectedMime = mime; break; }
+      }
+      
+      const recorderOptions = selectedMime ? { mimeType: selectedMime } : {};
+      const mediaRecorder = new MediaRecorder(destNode.stream, recorderOptions);
+      
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) recordedChunksRef.current.push(e.data);
       };
+      
       mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+        const ext = selectedMime.includes('mp4') ? 'mp4' : selectedMime.includes('ogg') ? 'ogg' : 'webm';
+        const blob = new Blob(recordedChunksRef.current, { type: selectedMime || 'audio/webm' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.style.display = 'none';
         a.href = url;
-        a.download = `kinesus-session-${Date.now()}.webm`;
+        a.download = `Kinesus-Session-${new Date().toISOString().slice(0,10)}.${ext}`;
+        a.type = selectedMime || 'audio/webm';
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-        }, 100);
+        }, 500);
       };
+      
       mediaRecorderRef.current = mediaRecorder;
     } catch (err) {
       console.warn("MediaRecorder API not supported for this context", err);
@@ -608,7 +620,7 @@ export function useAudioEngine(options?: EngineOptions) {
   const startRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
       recordedChunksRef.current = [];
-      mediaRecorderRef.current.start();
+      mediaRecorderRef.current.start(1000); // Capture data every 1s for reliability
       setIsRecording(true);
     }
   }, []);
