@@ -143,17 +143,24 @@ export function useAudioEngine(options?: EngineOptions) {
       mediaRecorder.onstop = () => {
         const ext = selectedMime.includes('mp4') ? 'mp4' : selectedMime.includes('ogg') ? 'ogg' : 'webm';
         const blob = new Blob(recordedChunksRef.current, { type: selectedMime || 'audio/webm' });
+        const fileName = `Kinesus-Session-${new Date().toISOString().slice(0,10)}.${ext}`;
+        
+        // Method 1: Standard anchor download
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Kinesus-Session-${new Date().toISOString().slice(0,10)}.${ext}`;
-        a.type = selectedMime || 'audio/webm';
-        document.body.appendChild(a);
-        a.click();
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        // Use a brief timeout to ensure DOM is ready
         setTimeout(() => {
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        }, 500);
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }, 1000);
+        }, 0);
       };
       
       mediaRecorderRef.current = mediaRecorder;
