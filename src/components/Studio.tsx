@@ -838,52 +838,68 @@ export default function Studio({ initialPreset, isPremium }: StudioProps) {
         onSkip={() => {}} 
       />
 
-      {/* Sticky Floating Recorder Bar */}
+      {/* Sticky Floating Transport Bar */}
       <div style={{
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
         zIndex: 90,
-        background: 'rgba(5, 5, 15, 0.85)',
-        backdropFilter: 'blur(20px)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-        padding: '0.6rem 1.5rem',
+        background: 'linear-gradient(180deg, rgba(5, 5, 15, 0.7) 0%, rgba(5, 5, 15, 0.95) 100%)',
+        backdropFilter: 'blur(24px)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+        padding: '0.75rem 2rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '1.5rem',
+        gap: '2rem',
       }}>
         {/* Play/Pause */}
         <button 
           onClick={togglePlay}
-          style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
+          style={{ background: isPlaying ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.05)', border: isPlaying ? '1px solid rgba(0, 240, 255, 0.3)' : '1px solid rgba(255,255,255,0.15)', borderRadius: '50%', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isPlaying ? '#00F0FF' : '#fff', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: isPlaying ? '0 0 15px rgba(0,240,255,0.2)' : 'none' }}
         >
-          {isPlaying ? <Pause fill="currentColor" size={16} /> : <Play fill="currentColor" size={16} style={{ marginLeft: '2px' }} />}
+          {isPlaying ? <Pause fill="currentColor" size={18} /> : <Play fill="currentColor" size={18} style={{ marginLeft: '2px' }} />}
         </button>
 
-        {/* Timer */}
-        <span style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', minWidth: '50px' }}>
-          {Math.floor(elapsedTime / 60).toString().padStart(2, '0')}:{(elapsedTime % 60).toString().padStart(2, '0')}
-        </span>
-
-        {/* Active wash indicator */}
-        {activeWashTypes.length > 0 && (
-          <span style={{ fontSize: '0.75rem', color: 'var(--brand-cyan)', letterSpacing: '1px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--brand-cyan)', boxShadow: '0 0 8px var(--brand-cyan)', animation: 'pulse-dot 1.5s infinite ease-in-out' }} />
-            {activeWashTypes.length} Wash{activeWashTypes.length > 1 ? 'es' : ''} Active
+        {/* Timer + Status */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', minWidth: '80px' }}>
+          <span style={{ fontFamily: 'monospace', fontSize: '1.1rem', color: 'rgba(255,255,255,0.8)', letterSpacing: '2px', fontWeight: 'bold' }}>
+            {Math.floor(elapsedTime / 60).toString().padStart(2, '0')}:{(elapsedTime % 60).toString().padStart(2, '0')}
           </span>
-        )}
+          {activeWashTypes.length > 0 && (
+            <span style={{ fontSize: '0.65rem', color: 'var(--brand-cyan)', letterSpacing: '1px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--brand-cyan)', boxShadow: '0 0 6px var(--brand-cyan)', animation: 'pulse-dot 1.5s infinite ease-in-out' }} />
+              {activeWashTypes.length} Wash{activeWashTypes.length > 1 ? 'es' : ''}
+            </span>
+          )}
+        </div>
 
-        {/* Record Button */}
+        {/* Divider */}
+        <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.08)' }} />
+
+        {/* Record Button — Big & Prominent */}
         <button
-          className={`record-action-button ${isRecording ? 'recording' : ''}`}
           onClick={!isPremium ? () => setShowPaywall(true) : (isRecording ? stopRecording : startRecording)}
-          title={!isPremium ? "Premium Feature" : (isRecording ? "Stop & Download" : "Record Session")}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', borderRadius: '50px', border: isRecording ? '1px solid rgba(255, 42, 42, 0.5)' : '1px solid rgba(255,255,255,0.15)', background: isRecording ? 'rgba(255, 42, 42, 0.1)' : 'rgba(255,255,255,0.05)', color: isRecording ? '#ff2a2a' : 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+          title={!isPremium ? "Premium Feature: Record Lossless WAV" : (isRecording ? "Stop & Download .WAV" : "Record Lossless Session")}
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '0.6rem', 
+            padding: '0.6rem 1.4rem', borderRadius: '50px', 
+            border: isRecording ? '1px solid rgba(255, 42, 42, 0.6)' : '1px solid rgba(255, 42, 42, 0.25)', 
+            background: isRecording ? 'rgba(255, 42, 42, 0.15)' : 'rgba(255, 42, 42, 0.05)', 
+            color: isRecording ? '#ff2a2a' : 'rgba(255,255,255,0.85)', 
+            cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '1.5px',
+            transition: 'all 0.3s ease',
+            boxShadow: isRecording ? '0 0 25px rgba(255, 42, 42, 0.3), inset 0 0 10px rgba(255, 42, 42, 0.1)' : '0 0 15px rgba(255, 42, 42, 0.08)',
+            animation: isRecording ? 'pulse-dot 1.5s infinite ease-in-out' : 'none',
+          }}
         >
-          {isRecording ? <Square fill="currentColor" size={10} style={{ color: '#ff2a2a' }} /> : <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff2a2a' }} />}
-          {isRecording ? 'STOP' : 'REC'}
+          {isRecording 
+            ? <Square fill="currentColor" size={12} style={{ color: '#ff2a2a' }} /> 
+            : <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff2a2a', boxShadow: '0 0 8px rgba(255,42,42,0.6)' }} />
+          }
+          {isRecording ? 'STOP REC' : '● REC'}
+          {!isRecording && <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', fontWeight: 'normal', marginLeft: '0.2rem' }}>WAV</span>}
         </button>
       </div>
     </section>
