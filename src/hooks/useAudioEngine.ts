@@ -96,8 +96,9 @@ export function useAudioEngine(options?: EngineOptions) {
   const analyserRef = useRef<AnalyserNode | null>(null);
   
   const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<BlobPart[]>([]);
+  const pcmBuffersRef = useRef<Float32Array[]>([]);
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const isRecordingRef = useRef(false);
 
   const initEngine = useCallback(() => {
     if (audioCtxRef.current) return;
@@ -121,52 +122,33 @@ export function useAudioEngine(options?: EngineOptions) {
     compressor.release.value = 0.25;
     compressor.connect(analyser);
 
-    // Recording Setup
-    const destNode = ctx.createMediaStreamDestination();
-    compressor.connect(destNode);
+    // WAV Recording Setup — raw PCM capture via ScriptProcessorNode
+    // Buffer size 4096 gives ~93ms chunks at 44100Hz — good balance of latency vs overhead
+    const scriptProcessor = ctx.createScriptProcessor(4096, 2, 2);
+    compressor.connect(scriptProcessor);
+    scriptProcessor.connect(ctx.destination); // Must be connected to destination to process
+    // Disconnect from destination to avoid double-output — connect to a silent gain instead
+    scriptProcessor.disconnect();
+    const silentGain = ctx.createGain();
+    silentGain.gain.value = 0;
+    silentGain.connect(ctx.destination);
+    compressor.connect(scriptProcessor);
+    scriptProcessor.connect(silentGain);
     
-    try {
-      // Find a supported MIME type
-      const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
-      let selectedMime = '';
-      for (const mime of mimeTypes) {
-        if (MediaRecorder.isTypeSupported(mime)) { selectedMime = mime; break; }
+    scriptProcessor.onaudioprocess = (e) => {
+      if (!isRecordingRef.current) return;
+      // Capture both channels as interleaved stereo
+      const left = e.inputBuffer.getChannelData(0);
+      const right = e.inputBuffer.getChannelData(1);
+      const interleaved = new Float32Array(left.length * 2);
+      for (let i = 0; i < left.length; i++) {
+        interleaved[i * 2] = left[i];
+        interleaved[i * 2 + 1] = right[i];
       }
-      
-      const recorderOptions = selectedMime ? { mimeType: selectedMime } : {};
-      const mediaRecorder = new MediaRecorder(destNode.stream, recorderOptions);
-      
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunksRef.current.push(e.data);
-      };
-      
-      mediaRecorder.onstop = () => {
-        const ext = selectedMime.includes('mp4') ? 'mp4' : selectedMime.includes('ogg') ? 'ogg' : 'webm';
-        const blob = new Blob(recordedChunksRef.current, { type: selectedMime || 'audio/webm' });
-        const fileName = `Kinesus-Session-${new Date().toISOString().slice(0,10)}.${ext}`;
-        
-        // Method 1: Standard anchor download
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        
-        // Use a brief timeout to ensure DOM is ready
-        setTimeout(() => {
-          link.click();
-          setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }, 1000);
-        }, 0);
-      };
-      
-      mediaRecorderRef.current = mediaRecorder;
-    } catch (err) {
-      console.warn("MediaRecorder API not supported for this context", err);
-    }
+      pcmBuffersRef.current.push(interleaved);
+    };
+    
+    scriptProcessorRef.current = scriptProcessor;
 
     const masterGain = ctx.createGain();
     masterGain.gain.value = 1;
@@ -625,18 +607,82 @@ export function useAudioEngine(options?: EngineOptions) {
   }, [initEngine]);
 
   const startRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
-      recordedChunksRef.current = [];
-      mediaRecorderRef.current.start(1000); // Capture data every 1s for reliability
-      setIsRecording(true);
-    }
+    pcmBuffersRef.current = [];
+    isRecordingRef.current = true;
+    setIsRecording(true);
   }, []);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+    isRecordingRef.current = false;
+    setIsRecording(false);
+    
+    if (pcmBuffersRef.current.length === 0 || !audioCtxRef.current) return;
+    
+    const sampleRate = audioCtxRef.current.sampleRate;
+    const numChannels = 2; // Stereo
+    const bitsPerSample = 16;
+    
+    // Merge all captured buffers into one
+    let totalLength = 0;
+    for (const buf of pcmBuffersRef.current) totalLength += buf.length;
+    const merged = new Float32Array(totalLength);
+    let offset = 0;
+    for (const buf of pcmBuffersRef.current) {
+      merged.set(buf, offset);
+      offset += buf.length;
     }
+    
+    // Convert Float32 (-1 to 1) to Int16 PCM
+    const dataLength = merged.length * 2; // 2 bytes per 16-bit sample
+    const headerLength = 44;
+    const buffer = new ArrayBuffer(headerLength + dataLength);
+    const view = new DataView(buffer);
+    
+    // WAV RIFF header
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true); // Subchunk1Size (PCM)
+    view.setUint16(20, 1, true);  // AudioFormat (1 = PCM)
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true); // ByteRate
+    view.setUint16(32, numChannels * (bitsPerSample / 8), true); // BlockAlign
+    view.setUint16(34, bitsPerSample, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataLength, true);
+    
+    // Write PCM samples
+    let sampleOffset = headerLength;
+    for (let i = 0; i < merged.length; i++) {
+      const clamped = Math.max(-1, Math.min(1, merged[i]));
+      const int16 = clamped < 0 ? clamped * 0x8000 : clamped * 0x7FFF;
+      view.setInt16(sampleOffset, int16, true);
+      sampleOffset += 2;
+    }
+    
+    // Download
+    const blob = new Blob([buffer], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Kinesus-Session-${new Date().toISOString().slice(0,10)}.wav`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    setTimeout(() => {
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }, 0);
+    
+    pcmBuffersRef.current = [];
   }, []);
 
   const getAnalyser = useCallback(() => {
