@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import './TheScience.css';
 
 // ─── Formation Generators ───────────────────────────────────────
-const PARTICLE_COUNT = 2000;
+const PARTICLE_COUNT = 3000;
 
 function generateSphere(count: number): Float32Array {
   const p = new Float32Array(count * 3);
@@ -183,6 +183,7 @@ function useScienceAudio(started: boolean) {
 // ─── Morphing Particle System ───────────────────────────────────
 function MorphingParticles({ audioStarted }: { audioStarted: boolean }) {
   const ref = useRef<THREE.Points>(null);
+  const matRef = useRef<THREE.PointsMaterial>(null);
   const scroll = useScroll();
   const mouse = useRef({ x: 0, y: 0 });
   const { updateScroll } = useScienceAudio(audioStarted);
@@ -212,14 +213,19 @@ function MorphingParticles({ audioStarted }: { audioStarted: boolean }) {
     }
     return c;
   }, []);
+  const sizes = useMemo(() => {
+    const s = new Float32Array(PARTICLE_COUNT);
+    for (let i = 0; i < PARTICLE_COUNT; i++) s[i] = 0.06;
+    return s;
+  }, []);
 
-  // Color targets per chapter: cyan, purple, mixed, gold, white
+  // Richer color palette per chapter
   const colorTargets = useMemo(() => ({
-    cyan:   [0.0, 0.94, 1.0],
-    purple: [0.48, 0.0, 1.0],
-    mixed:  [0.3, 0.5, 1.0],
-    gold:   [1.0, 0.84, 0.0],
-    white:  [1.0, 1.0, 1.0],
+    cyan:    [0.0, 0.94, 1.0],
+    purple:  [0.55, 0.0, 1.0],
+    electric:[0.1, 0.6, 1.0],
+    gold:    [1.0, 0.75, 0.1],
+    white:   [0.9, 0.95, 1.0],
   }), []);
 
   useFrame((state) => {
@@ -249,12 +255,12 @@ function MorphingParticles({ audioStarted }: { audioStarted: boolean }) {
       targetB = formations.waves;
       blend = Math.max(0, (offset - 0.3) / 0.1);
       colorA = colorTargets.purple;
-      colorB = colorTargets.mixed;
+      colorB = colorTargets.electric;
     } else if (offset < 0.6) {
       targetA = formations.waves;
       targetB = formations.cymatics;
       blend = Math.max(0, (offset - 0.5) / 0.1);
-      colorA = colorTargets.mixed;
+      colorA = colorTargets.electric;
       colorB = colorTargets.gold;
     } else if (offset < 0.8) {
       targetA = formations.cymatics;
@@ -270,73 +276,88 @@ function MorphingParticles({ audioStarted }: { audioStarted: boolean }) {
       colorB = colorTargets.white;
     }
 
-    const turbulenceStrength = Math.sin(blend * Math.PI) * 1.5;
+    const turbulenceStrength = Math.sin(blend * Math.PI) * 1.8;
+
+    // Mouse position in 3D space for repulsion
+    const mx = mouse.current.x * 4;
+    const my = mouse.current.y * 3;
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const i3 = i * 3;
-      const tA = targetA[i3];
-      const tAy = targetA[i3 + 1];
-      const tAz = targetA[i3 + 2];
-      const tB = targetB[i3];
-      const tBy = targetB[i3 + 1];
-      const tBz = targetB[i3 + 2];
+      const tA = targetA[i3], tAy = targetA[i3 + 1], tAz = targetA[i3 + 2];
+      const tB = targetB[i3], tBy = targetB[i3 + 1], tBz = targetB[i3 + 2];
 
-      const lx = tA + (tB - tA) * blend;
-      const ly = tAy + (tBy - tAy) * blend;
-      const lz = tAz + (tBz - tAz) * blend;
+      let lx = tA + (tB - tA) * blend;
+      let ly = tAy + (tBy - tAy) * blend;
+      let lz = tAz + (tBz - tAz) * blend;
 
       // Turbulence during transitions
       const phase = i * 0.008 + time;
       const tx = Math.sin(phase * 1.3 + time * 0.5) * turbulenceStrength;
       const ty = Math.cos(phase * 0.9 + time * 0.3) * turbulenceStrength;
       const tz = Math.sin(phase * 1.7 + time * 0.7) * turbulenceStrength * 0.6;
+      lx += tx; ly += ty; lz += tz;
 
-      // Smooth lerp toward target
-      arr[i3] += ((lx + tx) - arr[i3]) * 0.04;
-      arr[i3 + 1] += ((ly + ty) - arr[i3 + 1]) * 0.04;
-      arr[i3 + 2] += ((lz + tz) - arr[i3 + 2]) * 0.04;
+      // Mouse repulsion — particles flee from cursor
+      const dx = arr[i3] - mx;
+      const dy = arr[i3 + 1] - my;
+      const distSq = dx * dx + dy * dy + 0.01;
+      if (distSq < 4.0) {
+        const force = 0.15 / distSq;
+        lx += dx * force;
+        ly += dy * force;
+      }
 
-      // Color interpolation
-      colArr[i3] = colorA[0] + (colorB[0] - colorA[0]) * blend;
-      colArr[i3 + 1] = colorA[1] + (colorB[1] - colorA[1]) * blend;
-      colArr[i3 + 2] = colorA[2] + (colorB[2] - colorA[2]) * blend;
+      // Smooth lerp
+      arr[i3] += (lx - arr[i3]) * 0.045;
+      arr[i3 + 1] += (ly - arr[i3 + 1]) * 0.045;
+      arr[i3 + 2] += (lz - arr[i3 + 2]) * 0.045;
+
+      // Color interpolation with per-particle shimmer
+      const shimmer = Math.sin(phase * 2.0 + time) * 0.15;
+      colArr[i3] = Math.min(1, colorA[0] + (colorB[0] - colorA[0]) * blend + shimmer * 0.3);
+      colArr[i3 + 1] = Math.min(1, colorA[1] + (colorB[1] - colorA[1]) * blend + shimmer * 0.1);
+      colArr[i3 + 2] = Math.min(1, colorA[2] + (colorB[2] - colorA[2]) * blend + shimmer * 0.2);
     }
 
     attr.needsUpdate = true;
     colAttr.needsUpdate = true;
 
-    // Mouse parallax
-    const targetX = mouse.current.x * 0.5;
-    const targetY = mouse.current.y * 0.3;
-    state.camera.position.x += (targetX - state.camera.position.x) * 0.03;
-    state.camera.position.y += (targetY - state.camera.position.y) * 0.03;
+    // Pulsing particle size synced to chapter frequency
+    if (matRef.current) {
+      const pulse = 0.055 + Math.sin(time * 3.0) * 0.015 + Math.sin(time * 7.83) * 0.008;
+      matRef.current.size = pulse;
+    }
+
+    // Dynamic camera — parallax + scroll-driven zoom
+    const camTargetX = mouse.current.x * 0.8;
+    const camTargetY = mouse.current.y * 0.5;
+    const camTargetZ = 6 - offset * 2.5 + Math.sin(time * 0.2) * 0.3;
+    state.camera.position.x += (camTargetX - state.camera.position.x) * 0.04;
+    state.camera.position.y += (camTargetY - state.camera.position.y) * 0.04;
+    state.camera.position.z += (camTargetZ - state.camera.position.z) * 0.02;
     state.camera.lookAt(0, 0, 0);
 
-    // Slow global rotation
+    // Global rotation
     if (ref.current) {
-      ref.current.rotation.y = time * 0.03;
+      ref.current.rotation.y = time * 0.04;
+      ref.current.rotation.x = Math.sin(time * 0.02) * 0.1;
     }
   });
 
   return (
     <points ref={ref}>
       <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-          count={PARTICLE_COUNT}
-        />
-        <bufferAttribute
-          attach="attributes-color"
-          args={[colors, 3]}
-          count={PARTICLE_COUNT}
-        />
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} count={PARTICLE_COUNT} />
+        <bufferAttribute attach="attributes-color" args={[colors, 3]} count={PARTICLE_COUNT} />
+        <bufferAttribute attach="attributes-size" args={[sizes, 1]} count={PARTICLE_COUNT} />
       </bufferGeometry>
       <pointsMaterial
+        ref={matRef}
         size={0.06}
         vertexColors
         transparent
-        opacity={0.95}
+        opacity={0.9}
         blending={THREE.AdditiveBlending}
         depthWrite={false}
         sizeAttenuation
@@ -418,16 +439,17 @@ export default function TheScience({ onEnterStudio, session }: TheScienceProps) 
       )}
 
       <Canvas camera={{ position: [0, 0, 6], fov: 60 }} style={{ background: 'transparent' }} gl={{ antialias: false, powerPreference: 'low-power' }}>
-        <fog attach="fog" args={['#020205', 5, 25]} />
-        <ambientLight intensity={0.3} />
+        <fog attach="fog" args={['#020205', 6, 30]} />
+        <ambientLight intensity={0.4} />
+        <pointLight position={[0, 0, 0]} intensity={2} color="#00F0FF" distance={15} decay={2} />
 
         <EffectComposer>
-          <Bloom luminanceThreshold={0.9} luminanceSmoothing={0.9} intensity={1.2} />
+          <Bloom luminanceThreshold={0.6} luminanceSmoothing={0.7} intensity={2.0} />
         </EffectComposer>
 
         <ScrollControls pages={6} damping={0.15}>
           <Scroll>
-            <Stars radius={80} depth={50} count={2000} factor={3} saturation={0} fade speed={0.3} />
+            <Stars radius={100} depth={60} count={4000} factor={4} saturation={0.2} fade speed={0.4} />
             <MorphingParticles audioStarted={audioStarted} />
             <ScrollTracker progressBarRef={progressBarRef} scrollIndicatorRef={scrollIndicatorRef} />
           </Scroll>
@@ -439,6 +461,12 @@ export default function TheScience({ onEnterStudio, session }: TheScienceProps) 
               <h2 className="science-chapter-title">
                 The Frequency<br />of <span className="text-gradient">Earth</span>
               </h2>
+              <div className="science-hz-live">
+                <span className="hz-number">7.83</span>
+                <span className="hz-unit">Hz</span>
+                <div className="hz-pulse-ring" />
+                <div className="hz-pulse-ring hz-pulse-ring-2" />
+              </div>
               <p className="science-chapter-body">
                 In 1952, physicist W.O. Schumann mathematically predicted that the
                 Earth's electromagnetic field resonates at a base frequency of
@@ -454,6 +482,7 @@ export default function TheScience({ onEnterStudio, session }: TheScienceProps) 
 
             {/* ── Chapter 2: CIA Gateway Process ── */}
             <ChapterSection page={1}>
+              <div className="declassified-badge">DECLASSIFIED</div>
               <span className="science-chapter-label">Chapter II — Declassified</span>
               <h2 className="science-chapter-title">
                 CIA Project<br /><span className="text-gradient">Gateway</span>
@@ -487,6 +516,26 @@ export default function TheScience({ onEnterStudio, session }: TheScienceProps) 
                 Research demonstrates that sustained exposure synchronizes
                 brainwave activity to this phantom frequency.
               </p>
+              <div className="science-freq-bars">
+                <div className="freq-bar-group">
+                  <span className="freq-bar-label">Left Ear</span>
+                  <div className="freq-bars">
+                    {[...Array(12)].map((_, i) => <div key={`l${i}`} className="freq-bar" style={{ animationDelay: `${i * 0.08}s`, height: `${15 + Math.sin(i * 0.8) * 20}px` }} />)}
+                  </div>
+                  <span className="freq-bar-hz">200 Hz</span>
+                </div>
+                <div className="freq-bar-diff">
+                  <span className="freq-diff-number">10 Hz</span>
+                  <span className="freq-diff-label">Alpha Beat</span>
+                </div>
+                <div className="freq-bar-group">
+                  <span className="freq-bar-label">Right Ear</span>
+                  <div className="freq-bars">
+                    {[...Array(12)].map((_, i) => <div key={`r${i}`} className="freq-bar freq-bar-right" style={{ animationDelay: `${i * 0.08 + 0.04}s`, height: `${15 + Math.cos(i * 0.8) * 20}px` }} />)}
+                  </div>
+                  <span className="freq-bar-hz">210 Hz</span>
+                </div>
+              </div>
               <div className="science-interact-hint">
                 🎧 A 10 Hz alpha binaural beat is playing right now
               </div>

@@ -141,20 +141,6 @@
   pointer-events: none;
 }
 
-.science-chapter-inner {
-  max-width: 700px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 2.5rem 3rem;
-  background: rgba(2, 2, 5, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-}
-
 .science-chapter-label {
   font-family: var(--font-heading);
   font-size: 0.75rem;
@@ -289,6 +275,220 @@
   transform: scale(1.05);
 }
 
+/* ── Live Hz Pulse Indicator ── */
+.science-hz-live {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 1rem 0;
+}
+
+.hz-number {
+  font-family: var(--font-heading);
+  font-size: 4rem;
+  font-weight: 800;
+  letter-spacing: -3px;
+  color: var(--brand-cyan);
+  text-shadow: 0 0 40px rgba(0, 240, 255, 0.6), 0 0 80px rgba(0, 240, 255, 0.3);
+  animation: hzGlow 2s ease-in-out infinite;
+}
+
+.hz-unit {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgba(0, 240, 255, 0.5);
+  letter-spacing: 2px;
+}
+
+.hz-pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120px;
+  height: 120px;
+  border: 2px solid rgba(0, 240, 255, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  animation: pulseRingExpand 1.8s ease-out infinite;
+}
+
+.hz-pulse-ring-2 {
+  animation-delay: 0.9s;
+}
+
+@keyframes pulseRingExpand {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; border-color: rgba(0, 240, 255, 0.6); }
+  100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; border-color: rgba(0, 240, 255, 0); }
+}
+
+@keyframes hzGlow {
+  0%, 100% { text-shadow: 0 0 40px rgba(0, 240, 255, 0.6), 0 0 80px rgba(0, 240, 255, 0.3); }
+  50% { text-shadow: 0 0 60px rgba(0, 240, 255, 0.9), 0 0 120px rgba(0, 240, 255, 0.5); }
+}
+
+/* ── Declassified Badge ── */
+.declassified-badge {
+  display: inline-block;
+  padding: 0.4rem 1.5rem;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: #ff3333;
+  border: 2px solid #ff3333;
+  border-radius: 4px;
+  transform: rotate(-3deg);
+  box-shadow: 0 0 20px rgba(255, 51, 51, 0.3), inset 0 0 10px rgba(255, 51, 51, 0.1);
+  animation: stampFlicker 3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.declassified-badge::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(transparent, rgba(255, 51, 51, 0.1), transparent);
+  animation: scanline 2s linear infinite;
+}
+
+@keyframes stampFlicker {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+  70% { opacity: 0.6; }
+  80% { opacity: 1; }
+}
+
+@keyframes scanline {
+  0% { top: -100%; }
+  100% { top: 200%; }
+}
+
+/* ── Frequency Bar Visualizer ── */
+.science-freq-bars {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.freq-bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.freq-bar-label {
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.freq-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 40px;
+}
+
+.freq-bar {
+  width: 4px;
+  min-height: 4px;
+  background: var(--brand-cyan);
+  border-radius: 2px;
+  animation: barPulse 1.2s ease-in-out infinite alternate;
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+}
+
+.freq-bar-right {
+  background: var(--brand-purple);
+  box-shadow: 0 0 6px rgba(122, 0, 255, 0.5);
+}
+
+@keyframes barPulse {
+  0% { transform: scaleY(0.4); opacity: 0.5; }
+  100% { transform: scaleY(1.6); opacity: 1; }
+}
+
+.freq-bar-hz {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.freq-bar-diff {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0 0.5rem;
+}
+
+.freq-diff-number {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--brand-cyan), var(--brand-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: hzGlow 2s ease-in-out infinite;
+}
+
+.freq-diff-label {
+  font-size: 0.6rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Enhanced Chapter Panel ── */
+.science-chapter-inner {
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2.5rem 3rem;
+  background: rgba(2, 2, 5, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 24px;
+  border: 1px solid rgba(0, 240, 255, 0.08);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(0, 240, 255, 0.02);
+  position: relative;
+  overflow: hidden;
+}
+
+.science-chapter-inner::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), transparent 40%, transparent 60%, rgba(122, 0, 255, 0.15));
+  z-index: -1;
+  opacity: 0;
+  animation: borderGlow 4s ease-in-out infinite;
+}
+
+@keyframes borderGlow {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .science-chapter {
@@ -310,5 +510,16 @@
   }
   .science-audio-prompt h2 {
     font-size: 1.5rem;
+  }
+  .hz-number {
+    font-size: 2.5rem;
+  }
+  .science-freq-bars {
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .freq-diff-number {
+    font-size: 1.3rem;
   }
 }
