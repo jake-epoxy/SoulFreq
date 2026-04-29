@@ -8,9 +8,10 @@ import Paywall from './components/Paywall';
 import AuthWall from './components/AuthWall';
 import ReloadPrompt from './components/ReloadPrompt';
 import Dashboard from './components/Dashboard';
+import TheScience from './components/TheScience';
 import { supabase } from './lib/supabase';
 
-export type AppStage = 'hero' | 'assessment' | 'auth' | 'studio' | 'protocol' | 'dashboard';
+export type AppStage = 'hero' | 'assessment' | 'auth' | 'studio' | 'protocol' | 'dashboard' | 'science';
 
 function App() {
   const [stage, setStage] = useState<AppStage>('hero');
@@ -127,7 +128,12 @@ function App() {
           Kinesus<span style={{ color: 'var(--brand-cyan)' }}>.</span>
         </div>
         <nav className="top-nav-links">
-          <a href="#" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.9rem' }}>The Science</a>
+          <button 
+            style={{ background: 'none', border: 'none', color: stage === 'science' ? 'var(--brand-cyan)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: stage === 'science' ? 'bold' : 'normal' }}
+            onClick={() => navigate('science')}
+          >
+            The Science
+          </button>
           {session ? (
             <>
               <button 
@@ -166,7 +172,7 @@ function App() {
         </nav>
       </header>
 
-      <main className={`main-content ${stage === 'hero' ? 'hero-stage' : ''}`}>
+      <main className={`main-content ${stage === 'hero' || stage === 'science' ? 'hero-stage' : ''}`}>
         <AnimatePresence mode="wait">
           {stage === 'hero' && (
             <motion.div 
@@ -262,6 +268,27 @@ function App() {
               <Dashboard 
                 onEnterStudio={() => navigate('studio')} 
                 onEnterProtocol={() => navigate('protocol')} 
+              />
+            </motion.div>
+          )}
+          {stage === 'science' && (
+            <motion.div 
+              key="science"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8 }}
+              style={{ width: '100%' }}
+            >
+              <TheScience 
+                onEnterStudio={() => {
+                  if (session) {
+                    navigate('studio');
+                  } else {
+                    navigate('assessment');
+                  }
+                }}
+                session={!!session}
               />
             </motion.div>
           )}

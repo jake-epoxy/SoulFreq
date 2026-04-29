@@ -524,6 +524,64 @@ export function useAudioEngine(options?: EngineOptions) {
     ctx.suspend();
   }, []);
 
+  // === SAFETY NET: Prevent runaway audio ===
+  // Suspend audio when tab is hidden, clean up on unmount
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
+      
+      if (document.hidden) {
+        // Tab hidden — suspend the entire AudioContext to kill all sound
+        if (ctx.state === 'running') {
+          ctx.suspend();
+        }
+      } else {
+        // Tab visible again — only resume if we were actively playing
+        if (isPlayingRef.current || activeWashesRef.current.length > 0) {
+          ctx.resume();
+        }
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      const ctx = audioCtxRef.current;
+      if (ctx) {
+        try { ctx.close(); } catch { /* ignore */ }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+
+      // Component unmount — full teardown
+      const ctx = audioCtxRef.current;
+      if (ctx) {
+        // Kill all active washes
+        activeWashesRef.current.forEach(wash => {
+          wash.nodes?.forEach((node: AudioNode) => {
+            try {
+              if (node instanceof OscillatorNode || node instanceof AudioBufferSourceNode) {
+                node.stop();
+              }
+              node.disconnect();
+            } catch { /* ignore */ }
+          });
+          try { wash.washMasterGain?.disconnect(); } catch { /* ignore */ }
+        });
+        activeWashesRef.current = [];
+
+        // Close the context entirely
+        try { ctx.close(); } catch { /* ignore */ }
+        audioCtxRef.current = null;
+      }
+    };
+  }, []);
+
   const togglePlay = useCallback(async () => {
     if (!audioCtxRef.current) initEngine();
     const ctx = audioCtxRef.current;

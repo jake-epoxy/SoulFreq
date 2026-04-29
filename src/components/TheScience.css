@@ -1,0 +1,313 @@
+.science-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 10;
+  background: #020205;
+}
+
+/* Scroll progress bar */
+.science-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--brand-cyan), var(--brand-purple));
+  z-index: 1000;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 10px var(--brand-cyan), 0 0 30px rgba(0, 240, 255, 0.3);
+}
+
+/* Scroll down indicator */
+.science-scroll-indicator {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  animation: scrollBounce 2s ease-in-out infinite;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+.science-scroll-indicator span {
+  font-size: 0.7rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.science-scroll-indicator .scroll-arrow {
+  width: 20px;
+  height: 20px;
+  border-right: 2px solid rgba(0, 240, 255, 0.5);
+  border-bottom: 2px solid rgba(0, 240, 255, 0.5);
+  transform: rotate(45deg);
+}
+
+@keyframes scrollBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.6; }
+  50% { transform: translateX(-50%) translateY(12px); opacity: 1; }
+}
+
+/* Headphones prompt overlay */
+.science-audio-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 2, 5, 0.95);
+  backdrop-filter: blur(20px);
+  gap: 1.5rem;
+  animation: promptFadeIn 0.6s ease-out;
+}
+
+@keyframes promptFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.science-audio-prompt .prompt-icon {
+  font-size: 4rem;
+  animation: promptPulse 2s ease-in-out infinite;
+}
+
+@keyframes promptPulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+.science-audio-prompt h2 {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  text-align: center;
+}
+
+.science-audio-prompt p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  text-align: center;
+  max-width: 400px;
+}
+
+.science-begin-btn {
+  padding: 1rem 3rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  border-radius: 50px;
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
+  font-family: var(--font-heading);
+}
+
+.science-begin-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 60px rgba(0, 240, 255, 0.4);
+  border-color: rgba(0, 240, 255, 0.8);
+  transform: scale(1.05);
+}
+
+/* Chapter text content */
+.science-chapter {
+  position: absolute;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.science-chapter-inner {
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2.5rem 3rem;
+  background: rgba(2, 2, 5, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.science-chapter-label {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--brand-cyan);
+  opacity: 0.7;
+}
+
+.science-chapter-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2.8rem, 5.5vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -2px;
+  line-height: 1.05;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.9), 0 0 60px rgba(0, 240, 255, 0.15);
+}
+
+.science-chapter-body {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  max-width: 600px;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9);
+}
+
+/* Blockquote for CIA document */
+.science-quote {
+  position: relative;
+  padding: 1.5rem 2rem;
+  margin: 0.5rem 0;
+  border-left: 3px solid var(--brand-purple);
+  background: rgba(122, 0, 255, 0.08);
+  border-radius: 0 12px 12px 0;
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: left;
+  max-width: 580px;
+}
+
+/* Citation */
+.science-citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: var(--font-body);
+  letter-spacing: 0.5px;
+}
+
+/* Interactive hint */
+.science-interact-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 12px;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  font-size: 0.85rem;
+  color: var(--brand-cyan);
+  animation: hintPulse 2s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Hz display for binaural section */
+.science-hz-display {
+  font-family: var(--font-heading);
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -2px;
+  color: var(--brand-cyan);
+  text-shadow: 0 0 40px rgba(0, 240, 255, 0.5);
+}
+
+.science-hz-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Final CTA section */
+.science-cta-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  pointer-events: auto;
+}
+
+.science-cta-reveal {
+  font-size: 1.15rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  max-width: 550px;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9);
+}
+
+.science-cta-btn {
+  padding: 1.2rem 3.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  border-radius: 50px;
+  background: rgba(5, 5, 10, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.2), inset 0 0 20px rgba(0, 240, 255, 0.1);
+  font-family: var(--font-heading);
+  pointer-events: auto;
+}
+
+.science-cta-btn:hover {
+  box-shadow: 0 0 80px rgba(0, 240, 255, 0.6), inset 0 0 40px rgba(0, 240, 255, 0.3);
+  background: rgba(0, 240, 255, 0.15);
+  border-color: var(--brand-cyan);
+  transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .science-chapter {
+    padding: 1.5rem;
+  }
+  .science-chapter-title {
+    font-size: 2rem;
+    letter-spacing: -1px;
+  }
+  .science-chapter-body {
+    font-size: 0.95rem;
+  }
+  .science-quote {
+    padding: 1rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  .science-hz-display {
+    font-size: 2rem;
+  }
+  .science-audio-prompt h2 {
+    font-size: 1.5rem;
+  }
+}
