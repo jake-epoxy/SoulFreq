@@ -142,34 +142,38 @@ function useScienceAudio(started: boolean) {
   }, [started]);
 
   const updateScroll = useCallback((offset: number) => {
-    if (!droneGainRef.current || !droneOscRef.current) return;
+    if (!droneGainRef.current || !droneOscRef.current || !ctxRef.current) return;
     const t = offset;
+    const now = ctxRef.current.currentTime;
 
-    // Drone: fades in gently over the full scroll
-    droneGainRef.current.gain.value = Math.min(t * 0.25, 0.12);
+    // Drone: fades in gently over the full scroll (smooth interpolation)
+    const targetGain = Math.min(t * 0.25, 0.12);
+    droneGainRef.current.gain.setTargetAtTime(targetGain, now, 0.1);
 
-    // Shift drone frequency per chapter
+    // Shift drone frequency per chapter (smooth glide between frequencies)
+    let targetFreq = 77.83; // Schumann harmonic default
     if (t < 0.2) {
-      droneOscRef.current.frequency.value = 7.83 + 70; // Schumann harmonic
+      targetFreq = 7.83 + 70;
     } else if (t < 0.4) {
-      droneOscRef.current.frequency.value = 80 + (t - 0.2) * 400;
+      targetFreq = 80 + (t - 0.2) * 400;
     } else if (t < 0.6) {
-      droneOscRef.current.frequency.value = 100;
+      targetFreq = 100;
     } else if (t < 0.8) {
-      droneOscRef.current.frequency.value = 136.1; // OM frequency
+      targetFreq = 136.1; // OM frequency
     } else {
-      droneOscRef.current.frequency.value = 80;
+      targetFreq = 80;
     }
+    droneOscRef.current.frequency.setTargetAtTime(targetFreq, now, 0.15);
 
-    // Binaural: active only in chapter 3 (0.4 - 0.6)
+    // Binaural: active only in chapter 3 (0.4 - 0.6) — smooth crossfade
     if (binGainRef.current) {
+      let binTarget = 0;
       if (t > 0.35 && t < 0.65) {
         const chapterBlend = Math.min(1, Math.max(0, (t - 0.35) / 0.05));
         const fadeOut = Math.min(1, Math.max(0, (0.65 - t) / 0.05));
-        binGainRef.current.gain.value = chapterBlend * fadeOut * 0.08;
-      } else {
-        binGainRef.current.gain.value = 0;
+        binTarget = chapterBlend * fadeOut * 0.08;
       }
+      binGainRef.current.gain.setTargetAtTime(binTarget, now, 0.1);
     }
   }, []);
 
@@ -376,18 +380,27 @@ interface TheScienceProps {
   session: boolean;
 }
 
+// ─── Stable scroll tracker (must be top-level, NOT inside TheScience) ─────
+function ScrollTracker({ progressBarRef, scrollIndicatorRef }: { progressBarRef: React.RefObject<HTMLDivElement | null>, scrollIndicatorRef: React.RefObject<HTMLDivElement | null> }) {
+  const scroll = useScroll();
+  useFrame(() => {
+    // Direct DOM manipulation — no setState, no re-renders
+    const offset = scroll.offset;
+    if (progressBarRef.current) {
+      progressBarRef.current.style.width = `${offset * 100}%`;
+    }
+    if (scrollIndicatorRef.current) {
+      scrollIndicatorRef.current.style.opacity = offset < 0.05 ? '1' : '0';
+      scrollIndicatorRef.current.style.pointerEvents = offset < 0.05 ? 'auto' : 'none';
+    }
+  });
+  return null;
+}
+
 export default function TheScience({ onEnterStudio, session }: TheScienceProps) {
   const [audioStarted, setAudioStarted] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  // Track scroll progress from the Canvas scroll
-  const ScrollTracker = () => {
-    const scroll = useScroll();
-    useFrame(() => {
-      setScrollProgress(scroll.offset);
-    });
-    return null;
-  };
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const scrollIndicatorRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="science-wrapper">
@@ -411,11 +424,11 @@ export default function TheScience({ onEnterStudio, session }: TheScienceProps) 
           <Bloom luminanceThreshold={0.9} luminanceSmoothing={0.9} intensity={1.2} />
         </EffectComposer>
 
-        <ScrollControls pages={6} damping={0.2}>
+        <ScrollControls pages={6} damping={0.15}>
           <Scroll>
             <Stars radius={80} depth={50} count={2000} factor={3} saturation={0} fade speed={0.3} />
             <MorphingParticles audioStarted={audioStarted} />
-            <ScrollTracker />
+            <ScrollTracker progressBarRef={progressBarRef} scrollIndicatorRef={scrollIndicatorRef} />
           </Scroll>
 
           <Scroll html style={{ width: '100%' }}>
@@ -525,14 +538,14 @@ export default function TheScience({ onEnterStudio, session }: TheScienceProps) 
         </ScrollControls>
       </Canvas>
 
-      {/* Scroll progress bar */}
+      {/* Scroll progress bar — updated via ref, no re-renders */}
       {audioStarted && (
-        <div className="science-progress" style={{ width: `${scrollProgress * 100}%` }} />
+        <div ref={progressBarRef} className="science-progress" style={{ width: '0%' }} />
       )}
 
-      {/* Scroll indicator */}
-      {audioStarted && scrollProgress < 0.05 && (
-        <div className="science-scroll-indicator">
+      {/* Scroll indicator — visibility controlled via ref */}
+      {audioStarted && (
+        <div ref={scrollIndicatorRef} className="science-scroll-indicator">
           <span>Scroll</span>
           <div className="scroll-arrow" />
         </div>
