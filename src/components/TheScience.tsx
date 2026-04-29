@@ -355,8 +355,9 @@ function ChapterSection({ page, children }: { page: number; children: React.Reac
     const pages = 6;
     const pageCenter = page / pages;
     const distance = Math.abs(scroll.offset - pageCenter);
-    const opacity = Math.max(0, 1 - distance * 5);
-    const translateY = distance * 60;
+    // Gentler fade: chapters stay visible much longer while scrolling
+    const opacity = Math.max(0, 1 - distance * 2.8);
+    const translateY = distance * 30;
     ref.current.style.opacity = opacity.toString();
     ref.current.style.transform = `translateY(${translateY}px)`;
   });
